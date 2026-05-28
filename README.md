@@ -1,20 +1,22 @@
-# Nightride · Apple platforms
+# Nightride FM clients
 
-Native [Nightride FM](https://nightride.fm) clients for the Apple ecosystem —
-sharing the same playback / Now Playing / metadata core across macOS and iOS.
+Native clients for [Nightride FM](https://nightride.fm) — the synthwave
+internet radio — sharing the same playback / Now Playing / metadata model
+across platforms.
 
-| Platform | Where               | UI                     | Highlights                                                     |
+| Platform | Where               | UI                     | Status                                                         |
 |----------|---------------------|------------------------|----------------------------------------------------------------|
-| macOS    | [`macos/`](macos/)  | Menu-bar SwiftUI app   | Now Playing widget, media keys, AirPods, Discord Rich Presence |
-| iOS      | [`ios/`](ios/)      | SwiftUI app + CarPlay  | Lock-screen + Control Center controls, CarPlay audio app       |
+| macOS    | [`macos/`](macos/)  | Menu-bar SwiftUI app   | ✅ Now Playing widget, media keys, AirPods, Discord Rich Presence |
+| iOS      | [`ios/`](ios/)      | SwiftUI app + CarPlay  | ✅ Lock-screen / Control Center / CarPlay (entitlement required) |
+| Android  | _(planned)_         | Compose + Auto         | 🛠 Not started                                                  |
 
-Both apps stream via `AVPlayer`, register with `MPRemoteCommandCenter`, and
-consume the Nightride FM SSE `meta` feed for live track metadata.
+All clients stream MP3 directly from `https://stream.nightride.fm/<station>.mp3`
+and consume `https://nightride.fm/meta` for live track titles.
 
 ## Quickstart
 
 - **macOS:** `cd macos && bash build.sh && open build/Nightride.app`
-- **iOS:** `cd ios && bash build.sh` then open `Nightride.xcodeproj` in Xcode and Run on simulator or your phone. See [`ios/README.md`](ios/README.md) for sideloading + CarPlay notes.
+- **iOS:** `cd ios && bash build.sh` → open `Nightride.xcodeproj` in Xcode → Run on simulator or your phone. See [`ios/README.md`](ios/README.md) for sideloading + CarPlay notes.
 
 ## Repo layout
 
@@ -25,12 +27,15 @@ consume the Nightride FM SSE `meta` feed for live track metadata.
 │   ├── App/Info.plist
 │   ├── Sources/Nightride/
 │   └── build.sh
-└── ios/                   # Xcode (via xcodegen) iOS app + CarPlay scene
-    ├── project.yml        # xcodegen source of truth
-    ├── App/
-    ├── Sources/
-    └── build.sh
+├── ios/                   # Xcode (via xcodegen) iOS app + CarPlay scene
+│   ├── project.yml        # xcodegen source of truth
+│   ├── App/
+│   ├── Sources/
+│   └── build.sh
+└── android/               # (TBD)
 ```
 
-No Apple Developer account is required to build either; ad-hoc / personal-team
-signing is enough for local installs.
+No Apple Developer account is required to build the Apple clients;
+ad-hoc / personal-team signing is enough for local installs. CarPlay does
+require a paid Developer Program account + Apple's CarPlay entitlement
+approval — see `ios/README.md`.
