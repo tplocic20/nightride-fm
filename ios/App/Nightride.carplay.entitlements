@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        Switch project.yml's CODE_SIGN_ENTITLEMENTS to this file once Apple
+        grants you the CarPlay audio entitlement on your team. Builds will
+        fail to sign with this file until the provisioning profile carries
+        the matching capability.
+    -->
+    <key>com.apple.developer.carplay-audio</key>
+    <true/>
+</dict>
+</plist>

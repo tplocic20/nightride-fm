@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        Default / free-signing entitlements. No CarPlay key here so that
+        sideloading with a personal Apple ID succeeds.
+
+        When you have the paid Developer Program account and Apple has granted
+        you the CarPlay audio entitlement, point CODE_SIGN_ENTITLEMENTS at
+        Nightride.carplay.entitlements instead (in project.yml or directly in
+        Xcode's Signing & Capabilities tab).
+    -->
+</dict>
+</plist>

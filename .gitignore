@@ -6,3 +6,7 @@ DerivedData/
 *.xcuserdatad/
 xcuserdata/
 .DS_Store
+
+# xcodegen output — regenerate with `xcodegen` per project.yml
+ios/Nightride.xcodeproj/
+
