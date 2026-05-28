@@ -17,14 +17,19 @@ extension Station {
 }
 
 enum Stations {
+    // Order mirrors nightride.fm's main player (Nightride → Chillsynth →
+    // Datawave → Spacesynth → Darksynth → Horrorsynth → EBSM). Rekt and
+    // Rektory live under Rekt.Network rather than the main picker on the
+    // site, but their streams still work — we keep them at the bottom as
+    // extras.
     static let all: [Station] = [
         .nightride("nightride",   "Nightride FM"),
-        .nightride("darksynth",   "Darksynth"),
         .nightride("chillsynth",  "Chillsynth"),
         .nightride("datawave",    "Datawave"),
-        .nightride("ebsm",        "EBSM"),
-        .nightride("horrorsynth", "Horrorsynth"),
         .nightride("spacesynth",  "Spacesynth"),
+        .nightride("darksynth",   "Darksynth"),
+        .nightride("horrorsynth", "Horrorsynth"),
+        .nightride("ebsm",        "EBSM"),
         .nightride("rekt",        "Rekt"),
         .nightride("rektory",     "Rektory"),
     ]
