@@ -36,6 +36,11 @@ targets:
       gatherCoverageData: false
     sources:
       - path: Sources
+      # Shared per-station cover art (generated in /assets) — referenced in
+      # place, not copied, so there's a single source of truth in the monorepo.
+      - path: ../assets/artwork
+        name: Artwork
+        buildPhase: resources
       - path: App/Info.plist
         buildPhase: none
       - path: App/Nightride.entitlements

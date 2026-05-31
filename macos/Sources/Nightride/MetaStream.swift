@@ -1,10 +1,30 @@
 import Foundation
 
+/// One station's currently-playing track, as reported by the /meta feed.
+struct TrackMeta: Equatable {
+    let artist: String
+    let title: String
+    let album: String
+
+    /// "Artist — Title", degrading gracefully if either half is missing.
+    var display: String {
+        switch (artist.isEmpty, title.isEmpty) {
+        case (false, false): return "\(artist) — \(title)"
+        case (true, false): return title
+        case (false, true): return artist
+        case (true, true): return ""
+        }
+    }
+
+    var isEmpty: Bool { artist.isEmpty && title.isEmpty }
+}
+
 /// Consumes the Nightride FM Server-Sent-Events feed at
-/// `https://nightride.fm/meta` and reports `[stationID: "Artist - Title"]`
-/// dictionaries whenever the metadata changes.
+/// `https://nightride.fm/meta` and reports `[stationID: TrackMeta]` whenever
+/// the metadata changes. The feed pushes a snapshot of every station on
+/// connect, then incremental updates as tracks change.
 final class MetaStream {
-    typealias Handler = ([String: String]) -> Void
+    typealias Handler = ([String: TrackMeta]) -> Void
 
     private let handler: Handler
     private var task: Task<Void, Never>?
@@ -55,13 +75,20 @@ final class MetaStream {
             let station: String
             let title: String
             let artist: String
+            let album: String?
         }
         guard let data = payload.data(using: .utf8),
               let entries = try? JSONDecoder().decode([Entry].self, from: data) else { return }
 
-        var updates: [String: String] = [:]
+        func clean(_ s: String) -> String { s.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+        var updates: [String: TrackMeta] = [:]
         for e in entries {
-            updates[e.station] = "\(e.artist) - \(e.title)"
+            updates[e.station] = TrackMeta(
+                artist: clean(e.artist),
+                title: clean(e.title),
+                album: clean(e.album ?? "")
+            )
         }
         if !updates.isEmpty {
             handler(updates)

@@ -1,4 +1,5 @@
 import AVFoundation
+import AppKit
 import Combine
 import MediaPlayer
 
@@ -6,11 +7,14 @@ import MediaPlayer
 final class PlayerStore: ObservableObject {
     @Published private(set) var current: Station?
     @Published private(set) var isPlaying = false
-    @Published private(set) var nowPlayingText: String = ""
+    @Published private(set) var nowPlaying: TrackMeta?
 
     private let player = AVPlayer()
     private var startedAt: Date?
     private var meta: MetaStream?
+    /// Latest known track per station id — kept warm so selecting a station
+    /// shows its current track instantly, instead of waiting for the next change.
+    private var latestMeta: [String: TrackMeta] = [:]
     private var rateObserver: NSKeyValueObservation?
     private let discord = DiscordRPC(clientID: "1396017162425991279")
 
@@ -22,6 +26,9 @@ final class PlayerStore: ObservableObject {
                 self?.refreshNowPlaying()
             }
         }
+        // Connect to the metadata feed at launch so every station's current
+        // track is cached before the user ever hits play.
+        startMeta()
     }
 
     deinit { rateObserver?.invalidate() }
@@ -31,13 +38,12 @@ final class PlayerStore: ObservableObject {
     func play(_ station: Station) {
         current = station
         startedAt = Date()
-        nowPlayingText = ""
+        nowPlaying = latestMeta[station.id]   // reflect cached track immediately
 
         let item = AVPlayerItem(url: station.streamURL)
         player.replaceCurrentItem(with: item)
         player.play()
 
-        startMetaIfNeeded()
         refreshNowPlaying()
         discord.update(activity: discordActivity())
     }
@@ -73,8 +79,8 @@ final class PlayerStore: ObservableObject {
 
     // MARK: – Metadata
 
-    private func startMetaIfNeeded() {
-        if meta != nil { return }
+    private func startMeta() {
+        guard meta == nil else { return }
         meta = MetaStream { [weak self] updates in
             Task { @MainActor [weak self] in
                 self?.handleMeta(updates)
@@ -83,14 +89,16 @@ final class PlayerStore: ObservableObject {
         meta?.start()
     }
 
-    private func handleMeta(_ updates: [String: String]) {
-        guard let cur = current, let title = updates[cur.id], !title.isEmpty else { return }
-        nowPlayingText = title
+    private func handleMeta(_ updates: [String: TrackMeta]) {
+        latestMeta.merge(updates) { _, new in new }
+        // Only refresh the UI / widgets when the change touches the live station.
+        guard let cur = current, let track = updates[cur.id] else { return }
+        nowPlaying = track
         refreshNowPlaying()
         discord.update(activity: discordActivity())
     }
 
-    // MARK: – Now Playing widget
+    // MARK: – Now Playing widget (Control Center / media keys / lock screen)
 
     private func refreshNowPlaying() {
         let center = MPNowPlayingInfoCenter.default()
@@ -100,13 +108,18 @@ final class PlayerStore: ObservableObject {
             return
         }
 
-        let (track, artist) = splitTitle(nowPlayingText, station: cur)
+        let track = nowPlaying ?? .init(artist: "", title: "", album: "")
         var info: [String: Any] = [
-            MPMediaItemPropertyTitle: track,
-            MPMediaItemPropertyArtist: artist,
+            // Now Playing reads: title (song) → artist → album (station).
+            MPMediaItemPropertyTitle: track.title.isEmpty ? cur.name : track.title,
+            MPMediaItemPropertyArtist: track.artist.isEmpty ? "Nightride FM" : track.artist,
+            MPMediaItemPropertyAlbumTitle: "\(cur.name) · Nightride FM",
             MPNowPlayingInfoPropertyIsLiveStream: true,
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
         ]
+        if let art = artwork(for: cur) {
+            info[MPMediaItemPropertyArtwork] = art
+        }
         if let start = startedAt {
             info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = Date().timeIntervalSince(start)
         }
@@ -114,30 +127,31 @@ final class PlayerStore: ObservableObject {
         center.playbackState = isPlaying ? .playing : .paused
     }
 
-    private func splitTitle(_ raw: String, station: Station) -> (track: String, artist: String) {
-        let trimmed = raw.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else {
-            return (station.name, "Nightride FM")
-        }
-        if let dash = trimmed.range(of: " - ") {
-            let artist = String(trimmed[..<dash.lowerBound]).trimmingCharacters(in: .whitespaces)
-            let track  = String(trimmed[dash.upperBound...]).trimmingCharacters(in: .whitespaces)
-            return (track, "\(artist) — \(station.name)")
-        }
-        return (trimmed, station.name)
+    // MARK: – Artwork
+
+    private var artworkCache: [String: MPMediaItemArtwork] = [:]
+
+    /// The shared per-station cover (generated in /assets). Drives the
+    /// Control Center / Now Playing art slot.
+    private func artwork(for station: Station) -> MPMediaItemArtwork? {
+        if let cached = artworkCache[station.id] { return cached }
+        guard let image = Artwork.image(for: station) else { return nil }
+        let art = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        artworkCache[station.id] = art
+        return art
     }
 
     // MARK: – Discord
 
     private func discordActivity() -> DiscordRPC.Activity? {
         guard let cur = current, isPlaying else { return nil }
-        let (track, artist) = splitTitle(nowPlayingText, station: cur)
+        let track = nowPlaying ?? .init(artist: "", title: "", album: "")
         return DiscordRPC.Activity(
             details: "Listening to \(cur.name)",
-            state: artist,
+            state: track.isEmpty ? cur.name : track.display,
             startTimestamp: startedAt,
             largeImage: cur.id == "nightride" ? "nrfm" : cur.id,
-            largeText: track
+            largeText: track.title.isEmpty ? cur.name : track.title
         )
     }
 }

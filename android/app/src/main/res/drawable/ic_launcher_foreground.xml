@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Crescent moon: outer disc minus an offset disc (evenOdd carves the
+         overlap out), giving a clean neon-pink crescent. -->
+    <path
+        android:fillColor="#FF4D9D"
+        android:fillType="evenOdd"
+        android:pathData="M30,56 a28,28 0 1 0 56,0 a28,28 0 1 0 -56,0 M48,46 a26,26 0 1 0 52,0 a26,26 0 1 0 -52,0" />
+
+    <!-- A couple of stars. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,34 l1.6,4 4,1.6 -4,1.6 -1.6,4 -1.6,-4 -4,-1.6 4,-1.6 z" />
+    <path
+        android:fillColor="#B388FF"
+        android:pathData="M52,72 l1.1,2.8 2.8,1.1 -2.8,1.1 -1.1,2.8 -1.1,-2.8 -2.8,-1.1 2.8,-1.1 z" />
+</vector>

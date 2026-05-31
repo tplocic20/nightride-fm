@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose owns the real theming; this just gives us a no-action-bar,
+         edge-to-edge-friendly host window with the right background colour. -->
+    <style name="Theme.Nightride" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/night_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

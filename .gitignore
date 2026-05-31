@@ -10,3 +10,6 @@ xcuserdata/
 # xcodegen output — regenerate with `xcodegen` per project.yml
 ios/Nightride.xcodeproj/
 
+
+# shared asset generator deps (artwork PNGs ARE committed)
+assets/node_modules/

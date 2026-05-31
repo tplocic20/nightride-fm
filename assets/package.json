@@ -1,0 +1,12 @@
+{
+  "name": "nightride-artwork",
+  "private": true,
+  "type": "module",
+  "description": "Shared per-station cover-art generator (unscii pixel font → PNG).",
+  "scripts": {
+    "build": "node generate.mjs"
+  },
+  "dependencies": {
+    "opentype.js": "^2.0.0"
+  }
+}
