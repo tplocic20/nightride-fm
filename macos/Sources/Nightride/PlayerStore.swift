@@ -2,6 +2,7 @@ import AVFoundation
 import AppKit
 import Combine
 import MediaPlayer
+import SwiftUI
 
 @MainActor
 final class PlayerStore: ObservableObject {
@@ -22,7 +23,7 @@ final class PlayerStore: ObservableObject {
         rateObserver = player.observe(\.rate, options: [.new]) { [weak self] _, change in
             let rate = change.newValue ?? 0
             Task { @MainActor [weak self] in
-                self?.isPlaying = rate != 0
+                withAnimation(Theme.transition) { self?.isPlaying = rate != 0 }
                 self?.refreshNowPlaying()
             }
         }
@@ -36,9 +37,13 @@ final class PlayerStore: ObservableObject {
     // MARK: – User intent
 
     func play(_ station: Station) {
-        current = station
+        // Drive both published changes through the one shared curve so the
+        // header, transport row and station list animate together.
+        withAnimation(Theme.transition) {
+            current = station
+            nowPlaying = latestMeta[station.id]   // reflect cached track immediately
+        }
         startedAt = Date()
-        nowPlaying = latestMeta[station.id]   // reflect cached track immediately
 
         let item = AVPlayerItem(url: station.streamURL)
         player.replaceCurrentItem(with: item)
@@ -93,7 +98,7 @@ final class PlayerStore: ObservableObject {
         latestMeta.merge(updates) { _, new in new }
         // Only refresh the UI / widgets when the change touches the live station.
         guard let cur = current, let track = updates[cur.id] else { return }
-        nowPlaying = track
+        withAnimation(Theme.transition) { nowPlaying = track }
         refreshNowPlaying()
         discord.update(activity: discordActivity())
     }

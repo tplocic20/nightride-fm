@@ -46,11 +46,13 @@ struct ContentView: View {
                 .font(.title.bold())
                 .multilineTextAlignment(.center)
 
+            // Reserve both lines so a wrapping title doesn't nudge the cover /
+            // station name up and down as tracks change.
             Text(store.nowPlaying?.display.isEmpty == false ? store.nowPlaying!.display : "Nightride FM")
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
+                .lineLimit(2, reservesSpace: true)
         }
     }
 

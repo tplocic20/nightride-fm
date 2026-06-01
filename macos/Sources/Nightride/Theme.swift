@@ -25,6 +25,11 @@ enum Theme {
     static func display(_ size: CGFloat, weight: Font.Weight = .semibold) -> Font {
         .system(size: size, weight: weight)
     }
+
+    /// The single curve every state transition rides. Driven from one
+    /// `withAnimation` at the mutation site (see PlayerStore) so the whole
+    /// popover animates as one — no element ever snaps ahead of its neighbours.
+    static let transition: Animation = .easeInOut(duration: 0.3)
 }
 
 extension Color {
