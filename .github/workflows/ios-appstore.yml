@@ -1,0 +1,111 @@
+# Build, sign, and upload the iOS app to App Store Connect (TestFlight / review).
+#
+# ⚠️ STATUS: SCAFFOLD — needs portal setup that doesn't exist yet, and carries
+# the same trademark-review risk as any "Nightride"-branded store app
+# (see TRADEMARK.md). Lives on its own branch until that's resolved.
+#
+# The pipeline itself is real (the iOS app already has a generated Xcode project
+# via xcodegen), but it will fail at preflight until the secrets below exist.
+#
+# ──────────────────────────────────────────────────────────────────────────
+# ONE-TIME SETUP — repository secrets:
+#   APPLE_API_KEY_ID        App Store Connect API key id (App Store Connect ▸
+#   APPLE_API_ISSUER_ID       Users and Access ▸ Integrations ▸ App Store Connect API).
+#   APPLE_API_KEY_P8_BASE64   The .p8 private key, base64-encoded.
+#   IOS_DIST_CERT_P12_BASE64  "Apple Distribution" cert + key as base64 .p12.
+#   IOS_DIST_CERT_PASSWORD    Password for that .p12.
+#   IOS_PROVISION_PROFILE_BASE64  App Store provisioning profile (.mobileprovision), base64.
+#   IOS_TEAM_ID               10-char Team ID.
+# Plus: create the app record in App Store Connect (bundle dev.plocic.nightride).
+# ──────────────────────────────────────────────────────────────────────────
+
+name: iOS App Store
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["ios-v*"]   # tag iOS releases distinctly, e.g. ios-v0.2.0
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preflight — required secrets present?
+        env:
+          API_KEY: ${{ secrets.APPLE_API_KEY_ID }}
+          CERT: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          PROFILE: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+        run: |
+          missing=0
+          for v in API_KEY CERT PROFILE; do
+            if [ -z "${!v}" ]; then echo "✗ missing secret: $v"; missing=1; fi
+          done
+          if [ "$missing" = 1 ]; then
+            echo "::error::iOS signing secrets not configured. See the header of .github/workflows/ios-appstore.yml."
+            exit 1
+          fi
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate icons + artwork
+        run: |
+          brew install librsvg
+          cd assets && npm install --no-audit --no-fund && node icon.mjs && node generate.mjs
+
+      - name: Generate Xcode project
+        env:
+          BUNDLE_ID: dev.plocic.nightride
+          DEVELOPMENT_TEAM: ${{ secrets.IOS_TEAM_ID }}
+        run: cd ios && bash build.sh
+
+      - name: Import signing assets
+        env:
+          CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/build.keychain"
+          KEYCHAIN_PW="$(openssl rand -base64 24)"
+          security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PW" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          # Install the provisioning profile.
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "$PROFILE_BASE64" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/dist.mobileprovision"
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      - name: Archive + export .ipa
+        run: |
+          cd ios
+          xcodebuild -project Nightride.xcodeproj -scheme Nightride \
+            -configuration Release -archivePath build/Nightride.xcarchive \
+            -destination "generic/platform=iOS" archive
+          cat > build/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>${{ secrets.IOS_TEAM_ID }}</string>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath build/Nightride.xcarchive \
+            -exportOptionsPlist build/ExportOptions.plist -exportPath build/export
+
+      - name: Upload to App Store Connect
+        env:
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
+          API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+        run: |
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$API_KEY_P8" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8"
+          xcrun altool --upload-app -f ios/build/export/*.ipa -t ios \
+            --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER"
