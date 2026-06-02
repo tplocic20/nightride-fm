@@ -1,4 +1,4 @@
-package fm.nightride.android
+package dev.plocic.nightride
 
 /**
  * Splits the raw "Artist - Title" string from the /meta feed into the

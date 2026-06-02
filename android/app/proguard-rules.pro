@@ -2,10 +2,10 @@
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.**
 
--keepclassmembers class fm.nightride.android.** {
+-keepclassmembers class dev.plocic.nightride.** {
     *** Companion;
 }
--keepclasseswithmembers class fm.nightride.android.** {
+-keepclasseswithmembers class dev.plocic.nightride.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 

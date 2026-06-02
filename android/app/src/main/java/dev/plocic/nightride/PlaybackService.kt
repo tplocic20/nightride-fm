@@ -1,4 +1,4 @@
-package fm.nightride.android
+package dev.plocic.nightride
 
 import android.content.Intent
 import android.os.Handler

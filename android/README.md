@@ -78,7 +78,7 @@ android/
     ├── proguard-rules.pro
     └── src/main/
         ├── AndroidManifest.xml        # perms + service + Auto meta-data
-        ├── java/fm/nightride/android/
+        ├── java/dev/plocic/nightride/
         │   ├── Station.kt             # model + MediaItem mapping
         │   ├── Stations.kt            # static station list
         │   ├── Titles.kt              # "Artist - Title" → (track, artist)

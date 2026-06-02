@@ -1,4 +1,4 @@
-package fm.nightride.android
+package dev.plocic.nightride
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata

@@ -1,4 +1,4 @@
-package fm.nightride.android
+package dev.plocic.nightride
 
 object Stations {
     // Order mirrors nightride.fm's main player (Nightride → Chillsynth →

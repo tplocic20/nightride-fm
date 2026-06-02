@@ -1,4 +1,4 @@
-package fm.nightride.android
+package dev.plocic.nightride
 
 import android.Manifest
 import android.os.Build
@@ -7,8 +7,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import fm.nightride.android.ui.NightrideTheme
-import fm.nightride.android.ui.PlayerScreen
+import dev.plocic.nightride.ui.NightrideTheme
+import dev.plocic.nightride.ui.PlayerScreen
 
 class MainActivity : ComponentActivity() {
 

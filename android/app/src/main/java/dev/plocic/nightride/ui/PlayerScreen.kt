@@ -1,4 +1,4 @@
-package fm.nightride.android.ui
+package dev.plocic.nightride.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -42,9 +42,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import fm.nightride.android.BRAND
-import fm.nightride.android.PlayerController
-import fm.nightride.android.Stations
+import dev.plocic.nightride.BRAND
+import dev.plocic.nightride.PlayerController
+import dev.plocic.nightride.Stations
 
 @Composable
 fun PlayerScreen(player: PlayerController) {

@@ -4,6 +4,23 @@ Native clients for [Nightride FM](https://nightride.fm) — the synthwave
 internet radio — sharing the same playback / Now Playing / metadata model
 across platforms.
 
+> [!NOTE]
+> **Unofficial fan project.** This is not the official Nightride FM app and is
+> not affiliated with or endorsed by the station — see [TRADEMARK.md](TRADEMARK.md).
+
+## Why this exists
+
+I built this out of love for Nightride FM — the radio and the community around
+it. I always missed being able to take it with me: on long midnight rides in
+the car, the station I wanted was never quite *there*, never quite integrated
+into the moment. I wanted the radio closer to me — more personal, woven into
+everyday life instead of living behind a browser tab.
+
+So these clients are exactly that: the stream, where you already are — the menu
+bar, the lock screen, CarPlay, Android Auto — plus one-tap links to find the
+current track on Spotify / Apple Music / YouTube when a song grabs you. Nothing
+more. No ads, no trackers, no accounts. Just the music, on the drive home.
+
 | Platform | Where                   | UI                     | Status                                                         |
 |----------|-------------------------|------------------------|----------------------------------------------------------------|
 | macOS    | [`macos/`](macos/)      | Menu-bar SwiftUI app   | ✅ Now Playing widget, media keys, AirPods, Discord Rich Presence |
@@ -43,3 +60,41 @@ No Apple Developer account is required to build the Apple clients;
 ad-hoc / personal-team signing is enough for local installs. CarPlay does
 require a paid Developer Program account + Apple's CarPlay entitlement
 approval — see `ios/README.md`.
+
+## What this app does — and doesn't
+
+Open source means you don't have to take my word for it; read the code. But to
+save you the grep, here is the **complete** network and data behaviour:
+
+**Every network connection the app makes:**
+
+| Connection | When | Why |
+|------------|------|-----|
+| `https://stream.nightride.fm/<station>.mp3` | while playing | the audio stream |
+| `https://nightride.fm/meta` | while open | live "now playing" track titles (server-sent events) |
+| Spotify / Apple Music / YouTube search URLs | **only when you tap** a chip | open that track in your music app |
+| Discord (local IPC) | if Discord is running | optional Rich Presence (macOS) — a **local** `/tmp` socket, never the internet |
+
+**That's the whole list.** Specifically, this app has:
+
+- ❌ **No ads.**
+- ❌ **No analytics, telemetry, or trackers.** (No Firebase, Sentry, Amplitude,
+  Mixpanel, Segment, AdMob, AppsFlyer — grep for yourself.)
+- ❌ **No accounts, logins, or personal data collection.** It never asks who
+  you are.
+- ❌ **No crypto miners** 🙂, no background phone-home, no hidden endpoints.
+- ❌ **No third-party SDKs on Apple platforms** — macOS and iOS use only
+  Apple's own frameworks (`AVFoundation`, `MediaPlayer`, SwiftUI). Android uses
+  standard AndroidX / Jetpack Compose / Media3 / OkHttp — all mainstream, none
+  for ads or tracking.
+
+The music-service buttons just build a **search URL** and hand it to the OS;
+they don't have (or want) access to your Spotify/Apple Music account.
+
+## Licence & contributing
+
+- Code: [MIT](LICENSE). Use it, learn from it, fork it.
+- Branding (names, icon, the circuit-P glyph, Nightride FM marks): see
+  [TRADEMARK.md](TRADEMARK.md) — the code is open, the identity is reserved.
+- Want to help? See [CONTRIBUTING.md](CONTRIBUTING.md) and the
+  [Code of Conduct](CODE_OF_CONDUCT.md). Found a security issue? [SECURITY.md](SECURITY.md).

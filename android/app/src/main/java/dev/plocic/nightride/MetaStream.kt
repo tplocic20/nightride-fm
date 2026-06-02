@@ -1,4 +1,4 @@
-package fm.nightride.android
+package dev.plocic.nightride
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

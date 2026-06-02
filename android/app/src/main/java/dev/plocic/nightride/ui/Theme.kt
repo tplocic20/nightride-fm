@@ -1,4 +1,4 @@
-package fm.nightride.android.ui
+package dev.plocic.nightride.ui
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
