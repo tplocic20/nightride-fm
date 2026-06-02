@@ -1,0 +1,44 @@
+# Build + upload the macOS app to the Mac App Store (App Store Connect).
+#
+# ⚠️ STATUS: SCAFFOLD — not ready to run. This needs portal setup that does not
+# exist yet, and carries trademark-review risk for a "Nightride"-branded app
+# (see TRADEMARK.md). It lives on its own branch until that's resolved.
+#
+# Mac App Store distribution differs from the direct-download DMG:
+#   • App Sandbox is MANDATORY (the current entitlements file is non-sandboxed
+#     for Developer ID; a MAS build needs com.apple.security.app-sandbox = true
+#     plus matching entitlements — and the menu-bar / Now Playing / media-key
+#     integration must be re-validated under the sandbox).
+#   • Requires a 3rd-party "Mac App Distribution" + "Mac Installer Distribution"
+#     cert, an App Store Connect app record, and a provisioning profile.
+#   • The build is a signed .pkg uploaded via `xcrun altool`/`notarytool` or
+#     Transporter — NOT a notarized .dmg.
+#
+# Because the macOS app is built with SwiftPM (no .xcodeproj), MAS submission
+# realistically needs an Xcode project/archive wrapper. That work is deferred —
+# this file documents the path; it is intentionally inert.
+#
+# ──────────────────────────────────────────────────────────────────────────
+# ONE-TIME SETUP (when pursuing MAS):
+#   1. App Store Connect ▸ create the macOS app record (bundle dev.plocic.nightride).
+#   2. Certificates: "Mac App Distribution" + "Mac Installer Distribution".
+#   3. Provisioning profile for the app id.
+#   4. Add App Sandbox entitlements; re-test all system integrations.
+#   5. Secrets (same shape as iOS): ASC API key (issuer/key id/.p8), cert .p12s.
+# ──────────────────────────────────────────────────────────────────────────
+
+name: macOS App Store
+
+on:
+  workflow_dispatch:   # manual only — never auto-runs while it's a scaffold
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Not implemented yet
+        run: |
+          echo "::error::macOS App Store workflow is a scaffold. Complete the"
+          echo "::error::App Store Connect record, sandbox entitlements, and Xcode"
+          echo "::error::archive wrapper first (see header of this file)."
+          exit 1
