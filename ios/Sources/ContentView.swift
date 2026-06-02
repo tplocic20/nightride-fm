@@ -3,6 +3,9 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var store: PlayerStore
 
+    /// Brief "copied" confirmation state for the copy action chip.
+    @State private var copied = false
+
     /// Current station's accent, or the Nightride magenta before anything plays.
     private var accent: Color { store.current?.accent ?? Color(hex: 0xCC55FF) }
 
@@ -23,6 +26,22 @@ struct ContentView: View {
         .foregroundStyle(.white)
         .preferredColorScheme(.dark)
         .animation(.easeInOut(duration: 0.35), value: store.current?.id)
+        .overlay(alignment: .bottom) {
+            // Unobtrusive copy confirmation, floating above the safe area.
+            if copied {
+                Toast(text: "copied to clipboard", accent: accent)
+                    .padding(.bottom, 36)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
+    }
+
+    /// Flash the copy toast for ~1.4s.
+    private func showToast() {
+        withAnimation(.easeInOut(duration: 0.25)) { copied = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            withAnimation(.easeInOut(duration: 0.25)) { copied = false }
+        }
     }
 
     // MARK: – Subviews
@@ -53,6 +72,27 @@ struct ContentView: View {
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .lineLimit(2, reservesSpace: true)
+
+            trackActions
+        }
+    }
+
+    /// Quick "I love this song" row — search the live track on a streaming
+    /// service or copy "Artist — Title". Only shown when a real track is known.
+    @ViewBuilder
+    private var trackActions: some View {
+        if let track = store.nowPlaying, !track.isEmpty {
+            HStack(spacing: 8) {
+                ForEach(MusicService.allCases) { service in
+                    ActionChip(label: service.label, accent: accent) {
+                        MusicSearch.open(service, for: track)
+                    }
+                }
+                ActionChip(label: "copy", accent: accent) {
+                    MusicSearch.copy(track)
+                    showToast()
+                }
+            }
         }
     }
 
@@ -124,6 +164,46 @@ struct ContentView: View {
                     .strokeBorder(accent.opacity(0.4), lineWidth: 1)
             )
         }
+    }
+}
+
+/// Tiny non-intrusive confirmation pill (e.g. after copying). Translucent dark
+/// capsule with a thin accent edge — reads as part of the synthwave chrome.
+private struct Toast: View {
+    let text: String
+    var accent: Color = Color(hex: 0xCC55FF)
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 12, weight: .medium, design: .monospaced))
+            .foregroundStyle(.white)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .background(Capsule().fill(Color(hex: 0x1D1422).opacity(0.92)))
+            .overlay(Capsule().strokeBorder(accent.opacity(0.6), lineWidth: 1))
+            .shadow(color: accent.opacity(0.45), radius: 8)
+    }
+}
+
+/// Small text chip for the quick-search / copy actions under the track.
+private struct ActionChip: View {
+    let label: String
+    var accent: Color = Color(hex: 0xCC55FF)
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.85))
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(accent.opacity(0.5), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 

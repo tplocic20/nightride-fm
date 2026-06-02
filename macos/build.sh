@@ -24,6 +24,10 @@ cp "App/Info.plist" "${APP}/Contents/Info.plist"
 # Shared per-station cover art (generated in /assets) → bundle Resources.
 cp ../assets/artwork/*.png "${RES_DIR}/" 2>/dev/null || echo "  (no artwork — run: cd assets && bun run build)"
 
+# App icon (generated in /assets/icon) → bundle Resources, named to match
+# CFBundleIconFile in Info.plist.
+cp "App/Nightride.icns" "${RES_DIR}/Nightride.icns" 2>/dev/null || echo "  (no icon — run: cd assets && node icon.mjs)"
+
 echo "→ ad-hoc codesigning…"
 codesign --force --sign - --timestamp=none "${APP}"
 

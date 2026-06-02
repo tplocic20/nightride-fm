@@ -68,10 +68,16 @@
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
 
+    <!-- Dark synthwave ground + centred sun/glyph logo, instead of the old
+         flat-pink AccentColor fill. Both live in Assets.xcassets. -->
     <key>UILaunchScreen</key>
     <dict>
         <key>UIColorName</key>
-        <string>AccentColor</string>
+        <string>LaunchBackground</string>
+        <key>UIImageName</key>
+        <string>LaunchLogo</string>
+        <key>UIImageRespectsSafeAreaInsets</key>
+        <true/>
     </dict>
 </dict>
 </plist>

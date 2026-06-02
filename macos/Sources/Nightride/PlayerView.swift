@@ -6,6 +6,9 @@ import AppKit
 struct PlayerView: View {
     @ObservedObject var store: PlayerStore
 
+    /// Brief "copied" confirmation state for the copy action chip.
+    @State private var copied = false
+
     /// Current station's accent, or the Nightride magenta before anything plays.
     private var accent: Color { store.current?.accent ?? Theme.primary }
 
@@ -13,12 +16,28 @@ struct PlayerView: View {
         ZStack {
             Theme.bg
             content.padding(16)
+
+            // Unobtrusive copy confirmation, pinned to the bottom edge.
+            if copied {
+                Toast(text: "copied to clipboard", accent: accent)
+                    .padding(.bottom, 14)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
         }
         .frame(width: 300)
         .foregroundStyle(Theme.onSurface)
         // No scoped `.animation(value:)` here — every transition is driven by a
         // single `withAnimation(Theme.transition)` in PlayerStore, so the whole
         // view animates in one transaction and nothing snaps independently.
+    }
+
+    /// Flash the copy toast for ~1.4s.
+    private func showToast() {
+        withAnimation(Theme.transition) { copied = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            withAnimation(Theme.transition) { copied = false }
+        }
     }
 
     private var content: some View {
@@ -57,8 +76,29 @@ struct PlayerView: View {
                     .lineLimit(1)
 
                 attribution
+                trackActions
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// Quick "I love this song" row — search the live track on a streaming
+    /// service or copy "Artist — Title". Only shown when a real track is known.
+    @ViewBuilder
+    private var trackActions: some View {
+        if let track = store.nowPlaying, !track.isEmpty {
+            HStack(spacing: 6) {
+                ForEach(MusicService.allCases) { service in
+                    ActionChip(label: service.label, accent: accent) {
+                        MusicSearch.open(service, for: track)
+                    }
+                }
+                ActionChip(label: "copy", accent: accent) {
+                    MusicSearch.copy(track)
+                    showToast()
+                }
+            }
+            .padding(.top, 4)
         }
     }
 
@@ -146,6 +186,56 @@ struct PlayerView: View {
 }
 
 // MARK: – Sub-views
+
+/// Tiny non-intrusive confirmation pill (e.g. after copying). Translucent dark
+/// capsule with a thin accent edge and a small phosphor glow — reads as part of
+/// the CRT chrome, not a system alert.
+private struct Toast: View {
+    let text: String
+    var accent: Color = Theme.primary
+
+    var body: some View {
+        Text(text)
+            .font(Theme.mono(10, weight: .medium))
+            .tracking(0.5)
+            .foregroundStyle(Theme.onSurface)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .background(
+                Capsule().fill(Theme.surface2.opacity(0.92))
+            )
+            .overlay(
+                Capsule().strokeBorder(accent.opacity(0.6), lineWidth: 1)
+            )
+            .phosphorGlow(accent, radius: 6)
+    }
+}
+
+/// Small mono-text chip for the quick-search / copy actions under the track.
+private struct ActionChip: View {
+    let label: String
+    var accent: Color = Theme.primary
+    let action: () -> Void
+
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(Theme.mono(10, weight: .medium))
+                .foregroundStyle(hover ? accent : Theme.onSurfaceVar)
+                .padding(.vertical, 3)
+                .padding(.horizontal, 7)
+                .overlay(
+                    Rectangle()
+                        .strokeBorder(hover ? accent : Theme.outlineVar, lineWidth: 1)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+    }
+}
 
 private struct TransportButton: View {
     let grid: [String]

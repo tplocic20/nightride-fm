@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Shared per-station cover-art generator (unscii pixel font → PNG).",
   "scripts": {
-    "build": "node generate.mjs"
+    "build": "node generate.mjs",
+    "icon": "node icon.mjs"
   },
   "dependencies": {
     "opentype.js": "^2.0.0"

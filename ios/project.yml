@@ -41,14 +41,18 @@ targets:
       - path: ../assets/artwork
         name: Artwork
         buildPhase: resources
+      # App icon + colours. Declared under `sources` (not `resources`) because
+      # xcodegen only reliably adds .xcassets to the resources build phase from
+      # here — a top-level `resources:` entry was silently dropped, so the asset
+      # catalog never compiled and the app shipped the placeholder icon.
+      - path: App/Assets.xcassets
+        buildPhase: resources
       - path: App/Info.plist
         buildPhase: none
       - path: App/Nightride.entitlements
         buildPhase: none
       - path: App/Nightride.carplay.entitlements
         buildPhase: none
-    resources:
-      - path: App/Assets.xcassets
     settings:
       base:
         INFOPLIST_FILE: App/Info.plist
@@ -70,4 +74,7 @@ targets:
         SWIFT_EMIT_LOC_STRINGS: NO
         ENABLE_PREVIEWS: YES
         SUPPORTS_MACCATALYST: NO
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # Launch screen is defined explicitly via the UILaunchScreen dict in
+        # App/Info.plist (dark ground + centred logo). Leaving the auto-generation
+        # flag on would let Xcode synthesise a plain one and ignore ours.
+        INFOPLIST_KEY_UILaunchScreen_Generation: NO

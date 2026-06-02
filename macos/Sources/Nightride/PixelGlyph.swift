@@ -62,38 +62,43 @@ enum PixelGlyph {
         "..#......#.",
     ]
 
-    // Menu-bar marks — 9×9.
-    static let waveform = [
-        "....#....",
-        "..#.#.#..",
-        "..#.#.#..",
-        "#.#.#.#.#",
-        "#.#.#.#.#",
-        "#.#.#.#.#",
-        "#.#.#.#.#",
-        "#.#.#.#.#",
-        "#.#.#.#.#",
+    // Menu-bar marks — the brand pixel sun on a fixed horizon. State is shown by
+    // the sun's height: risen high with a ray gap when playing, set low when
+    // paused (and drawn dimmer, see NightrideApp). Both grids are 11×9 so the
+    // menu-bar slot never changes size between states.
+    static let sunUp = [
+        "...#####...",
+        ".#########.",
+        "###########",
+        "###########",
+        "###########",
+        "###########",
+        ".#########.",
+        "...........",   // ray gap — sun radiating above the horizon
+        "###########",   // horizon
     ]
 
-    static let moon = [
-        "..####...",
-        ".##..#...",
-        "##....#..",
-        "##.......",
-        "##.......",
-        "##....#..",
-        ".##..#...",
-        "..####...",
-        ".........",
+    static let sunSet = [
+        "...........",
+        "...........",
+        "...........",
+        "...#####...",
+        ".#########.",
+        "###########",
+        "###########",
+        "...........",
+        "###########",   // horizon — sun has set low into it
     ]
 
     /// Monochrome template NSImage for the menu-bar label; the system tints it.
-    static func image(_ grid: [String], cell: CGFloat = 2) -> NSImage {
+    /// `alpha` dims the mark (template images respect source alpha) — used to
+    /// fade the sun when paused.
+    static func image(_ grid: [String], cell: CGFloat = 2, alpha: CGFloat = 1) -> NSImage {
         let rows = grid.count
         let cols = grid.map(\.count).max() ?? 0
         let size = NSSize(width: CGFloat(cols) * cell, height: CGFloat(rows) * cell)
         let image = NSImage(size: size, flipped: true) { _ in
-            NSColor.black.setFill()
+            NSColor.black.withAlphaComponent(alpha).setFill()
             for (y, line) in grid.enumerated() {
                 for (x, char) in line.enumerated() where char == "#" {
                     NSRect(x: CGFloat(x) * cell, y: CGFloat(y) * cell,

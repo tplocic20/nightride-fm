@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="380" height="470" viewBox="0 0 380 470" role="img" aria-label="plocic.dev circuit P (copper)">
+    <title>plocic.dev — circuit P (copper)</title>
+    <path d="M 84 91 L 84 288 L 24 348 L 24 362" fill="none" stroke="#e1c292" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="miter"/>
+    <path d="M 84 91 L 97 78 L 287 78 L 300 91 L 300 237 L 287 250 L 97 250 L 84 237" fill="none" stroke="#e1c292" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="miter"/>
+    <path d="M 99 106 L 99 295 L 51 343 L 51 357" fill="none" stroke="#e1c292" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="miter"/>
+    <path d="M 99 106 L 112 93 L 272 93 L 285 106 L 285 222 L 272 235 L 112 235 L 99 222" fill="none" stroke="#e1c292" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="miter"/>
+    <path d="M 114 121 L 114 302 L 78 338 L 78 352" fill="none" stroke="#e1c292" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="miter"/>
+    <path d="M 114 121 L 127 108 L 257 108 L 270 121 L 270 207 L 257 220 L 127 220 L 114 207" fill="none" stroke="#e1c292" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="miter"/>
+    <path d="M 129 136 L 129 309 L 105 333 L 105 347" fill="none" stroke="#e1c292" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="miter"/>
+    <path d="M 129 136 L 142 123 L 242 123 L 255 136 L 255 192 L 242 205 L 142 205 L 129 192" fill="none" stroke="#e1c292" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="miter"/>
+    <path d="M 144 151 L 144 316 L 132 328 L 132 342" fill="none" stroke="#ffb3ad" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="miter"/>
+    <path d="M 144 151 L 157 138 L 227 138 L 240 151 L 240 177 L 227 190 L 157 190 L 144 177" fill="none" stroke="#ffb3ad" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="miter"/>
+    <circle cx="24" cy="362" r="6.4" fill="#131411" stroke="#ffb3ad" stroke-width="2.2"/>
+    <circle cx="24" cy="362" r="2.4" fill="#ffb3ad"/>
+    <circle cx="51" cy="357" r="6.4" fill="#131411" stroke="#e1c292" stroke-width="2.2"/>
+    <circle cx="78" cy="352" r="6.4" fill="#131411" stroke="#ffb3ad" stroke-width="2.2"/>
+    <circle cx="78" cy="352" r="2.4" fill="#ffb3ad"/>
+    <circle cx="105" cy="347" r="6.4" fill="#131411" stroke="#e1c292" stroke-width="2.2"/>
+    <circle cx="132" cy="342" r="6.4" fill="#131411" stroke="#ffb3ad" stroke-width="2.2"/>
+    <circle cx="132" cy="342" r="2.4" fill="#ffb3ad"/>
+</svg>

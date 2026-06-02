@@ -14,6 +14,8 @@
     <string>0.1.0</string>
     <key>CFBundleExecutable</key>
     <string>Nightride</string>
+    <key>CFBundleIconFile</key>
+    <string>Nightride</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key>
