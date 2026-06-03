@@ -13,3 +13,10 @@ local.properties
 *.iml
 captures/
 .cxx/
+
+# Release signing — NEVER commit
+*.jks
+keystore.properties
+
+# Kotlin compiler session markers (build cruft)
+.kotlin/

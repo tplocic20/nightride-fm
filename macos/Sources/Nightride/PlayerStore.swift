@@ -37,10 +37,13 @@ final class PlayerStore: ObservableObject {
     // MARK: – User intent
 
     func play(_ station: Station) {
-        // Drive both published changes through the one shared curve so the
-        // header, transport row and station list animate together.
+        // Flip the selection OUTSIDE the animation so the station list's `/`→`>`
+        // glyph and colour change instantly (no cross-dissolve). Only the track
+        // change is animated, so the header growth — and the list sliding with it —
+        // still runs on the shared curve, and the selected/previous rows glide in
+        // step with the others instead of snapping.
+        current = station
         withAnimation(Theme.transition) {
-            current = station
             nowPlaying = latestMeta[station.id]   // reflect cached track immediately
         }
         startedAt = Date()

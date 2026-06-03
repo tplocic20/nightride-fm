@@ -1,6 +1,7 @@
 package dev.plocic.nightride
 
 import android.content.Intent
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.AudioAttributes
@@ -10,6 +11,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaConstants
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.google.common.collect.ImmutableList
@@ -129,16 +131,30 @@ class PlaybackService : MediaLibraryService() {
     }
 
     /**
-     * A browse-tree entry for Android Auto: the station's cover art plus, when
-     * known, its current live track as the subtitle.
+     * A browse-tree entry for Android Auto: the station's cover art, its current
+     * live track as the subtitle, and a group-title hint so Auto sections the
+     * grid into "Stations" / "Rekt.Network".
      */
     private fun browseItem(station: Station): MediaItem {
         val base = station.toMediaItem(this)
         val raw = latestMeta[station.id].orEmpty()
-        if (raw.isEmpty()) return base
-        return base.buildUpon()
-            .setMediaMetadata(base.mediaMetadata.buildUpon().setSubtitle(raw).build())
+        val meta = base.mediaMetadata.buildUpon()
+            .apply { if (raw.isNotEmpty()) setSubtitle(raw) }
+            .setExtras(Bundle().apply {
+                putString(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_GROUP_TITLE, groupTitle(station))
+            })
             .build()
+        return base.buildUpon().setMediaMetadata(meta).build()
+    }
+
+    private fun groupTitle(station: Station): String =
+        if (station.id in REKT_IDS) "Rekt.Network" else "Stations"
+
+    /** Station name / id substring match for Auto voice search. */
+    private fun searchMatches(query: String): List<Station> {
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) return Stations.all
+        return Stations.all.filter { it.name.lowercase().contains(q) || it.id.contains(q) }
     }
 
     private inner class LibrarySessionCallback : MediaLibrarySession.Callback {
@@ -156,6 +172,17 @@ class PlaybackService : MediaLibraryService() {
                         .setIsBrowsable(true)
                         .setIsPlayable(false)
                         .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_RADIO_STATIONS)
+                        // Render the station list as a grid of covers in Auto.
+                        .setExtras(Bundle().apply {
+                            putInt(
+                                MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE,
+                                MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
+                            )
+                            putInt(
+                                MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE,
+                                MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
+                            )
+                        })
                         .build()
                 )
                 .build()
@@ -188,9 +215,34 @@ class PlaybackService : MediaLibraryService() {
             }.toMutableList()
             return Futures.immediateFuture(resolved)
         }
+
+        // Voice search ("play Datawave on Nightride"): report the match count,
+        // then serve the matching stations.
+        override fun onSearch(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            params: LibraryParams?,
+        ): ListenableFuture<LibraryResult<Void>> {
+            session.notifySearchResultChanged(browser, query, searchMatches(query).size, params)
+            return Futures.immediateFuture(LibraryResult.ofVoid(params))
+        }
+
+        override fun onGetSearchResult(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            page: Int,
+            pageSize: Int,
+            params: LibraryParams?,
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+            val results = ImmutableList.copyOf(searchMatches(query).map { browseItem(it) })
+            return Futures.immediateFuture(LibraryResult.ofItemList(results, params))
+        }
     }
 
     private companion object {
         const val ROOT_ID = "root"
+        val REKT_IDS = setOf("rekt", "rektory")
     }
 }

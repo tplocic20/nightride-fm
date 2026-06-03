@@ -274,18 +274,15 @@ private struct StationRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                // Selection marker + accent flip instantly (like hover feedback).
-                // The row's position still glides with the layout, but we strip
-                // animation from these leaves so the `/`→`>` glyph swap and the
-                // colour change don't cross-dissolve over the transition — that
-                // cross-fade is what made the selected row read as lagging behind
-                // the rows that simply slide. (Same width, so geometry is safe.)
+                // Selection glyph + colour flip instantly: PlayerStore changes
+                // `current` outside its animated transaction, so only the track
+                // change animates. That keeps the `/`→`>` swap snappy (no laggy
+                // cross-dissolve) while letting every row — including the newly-
+                // and previously-selected ones — glide with the layout.
                 Text(isCurrent ? ">" : "/")
                     .foregroundStyle(isCurrent ? station.accent : Theme.outline)
-                    .transaction { t in t.animation = nil }
                 Text(station.name.lowercased())
                     .foregroundStyle(labelColor)
-                    .transaction { t in t.animation = nil }
                 Spacer(minLength: 0)
             }
             .font(Theme.mono(12))
