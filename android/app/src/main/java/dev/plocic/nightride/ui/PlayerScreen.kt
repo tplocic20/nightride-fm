@@ -8,14 +8,18 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -31,10 +35,10 @@ import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -62,6 +66,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.plocic.nightride.Artwork
@@ -69,6 +74,7 @@ import dev.plocic.nightride.BRAND
 import dev.plocic.nightride.MusicSearch
 import dev.plocic.nightride.MusicService
 import dev.plocic.nightride.PlayerController
+import dev.plocic.nightride.Station
 import dev.plocic.nightride.Stations
 import kotlinx.coroutines.delay
 
@@ -106,17 +112,54 @@ fun PlayerScreen(player: PlayerController) {
             )
         )
 
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = 24.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceEvenly,
         ) {
-            StationHeader(player, accent) { copied = true }
-            TransportControls(player, accent)
-            StationPicker(player, accent)
+            if (maxWidth > maxHeight) {
+                // Landscape: cover on the left, controls on the right, so nothing
+                // gets pushed off the short vertical axis.
+                val coverSize = minOf(maxHeight * 0.82f, maxWidth * 0.42f)
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Cover(player, accent, coverSize)
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                    ) {
+                        TrackInfo(player)
+                        TrackActions(player, accent) { copied = true }
+                        TransportControls(player, accent)
+                        StationPicker(player, accent)
+                    }
+                }
+            } else {
+                // Portrait: a single centred vertical stack.
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Cover(player, accent, 224.dp)
+                        TrackInfo(player)
+                        TrackActions(player, accent) { copied = true }
+                    }
+                    TransportControls(player, accent)
+                    StationPicker(player, accent)
+                }
+            }
         }
 
         AnimatedVisibility(
@@ -129,13 +172,11 @@ fun PlayerScreen(player: PlayerController) {
 }
 
 @Composable
-private fun StationHeader(player: PlayerController, accent: Color, onCopied: () -> Unit) {
+private fun TrackInfo(player: PlayerController) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Cover(player, accent)
-
         Text(
             text = player.current?.name ?: "Tap play to start",
             color = Color.White,
@@ -143,9 +184,8 @@ private fun StationHeader(player: PlayerController, accent: Color, onCopied: () 
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
-
-        // Reserve both lines so a wrapping title doesn't nudge the cover up and
-        // down as tracks change.
+        // Reserve both lines so a wrapping title doesn't nudge the layout as
+        // tracks change.
         Text(
             text = player.nowPlaying.ifEmpty { BRAND },
             color = Color.White.copy(alpha = 0.7f),
@@ -155,13 +195,11 @@ private fun StationHeader(player: PlayerController, accent: Color, onCopied: () 
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-
-        TrackActions(player, accent, onCopied)
     }
 }
 
 @Composable
-private fun Cover(player: PlayerController, accent: Color) {
+private fun Cover(player: PlayerController, accent: Color, size: Dp) {
     val station = player.current
     val resId = station?.let { Artwork.resId(it) }
     if (station != null && resId != null) {
@@ -171,7 +209,7 @@ private fun Cover(player: PlayerController, accent: Color) {
             contentScale = ContentScale.Fit,
             filterQuality = FilterQuality.None,  // keep the pixel art crisp when scaled
             modifier = Modifier
-                .size(224.dp)
+                .size(size)
                 .shadow(24.dp, RectangleShape, clip = false, ambientColor = accent, spotColor = accent)
                 .border(1.dp, accent.copy(alpha = 0.6f)),
         )
@@ -254,44 +292,104 @@ private fun TransportControls(player: PlayerController, accent: Color) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StationPicker(player: PlayerController, accent: Color) {
-    var expanded by remember { mutableStateOf(false) }
+    var showSheet by remember { mutableStateOf(false) }
 
-    Box {
-        Surface(
-            onClick = { expanded = true },
-            color = Color.White.copy(alpha = 0.08f),
-            shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, accent.copy(alpha = 0.4f)),
-            modifier = Modifier.fillMaxWidth(),
+    Surface(
+        onClick = { showSheet = true },
+        color = Color.White.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.4f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Icon(Icons.Filled.List, contentDescription = null, tint = Color.White)
+            Spacer(Modifier.size(12.dp))
+            Text("Stations", color = Color.White)
+            Spacer(Modifier.weight(1f))
+            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, tint = Color.White)
+        }
+    }
+
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            containerColor = Color(0xFF15101C),
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color.White.copy(alpha = 0.3f)) },
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(bottom = 12.dp),
             ) {
-                Icon(Icons.Filled.List, contentDescription = null, tint = Color.White)
-                Spacer(Modifier.size(12.dp))
-                Text("Stations", color = Color.White)
-                Spacer(Modifier.weight(1f))
-                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, tint = Color.White)
+                Text(
+                    text = "Stations",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
+                )
+                Stations.all.forEach { station ->
+                    StationRow(
+                        station = station,
+                        selected = player.current?.id == station.id,
+                    ) {
+                        player.play(station)
+                        showSheet = false
+                    }
+                }
             }
         }
+    }
+}
 
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            Stations.all.forEach { station ->
-                val selected = player.current?.id == station.id
-                DropdownMenuItem(
-                    text = { Text(station.name) },
-                    onClick = {
-                        player.play(station)
-                        expanded = false
-                    },
-                    leadingIcon = if (selected) {
-                        { Icon(Icons.Filled.VolumeUp, contentDescription = null) }
-                    } else null,
-                )
-            }
+/** One station row in the picker sheet — cover bordered in the station's own
+ *  neon accent, with the live station highlighted. */
+@Composable
+private fun StationRow(station: Station, selected: Boolean, onClick: () -> Unit) {
+    val rowAccent = station.accentColor()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .background(if (selected) rowAccent.copy(alpha = 0.12f) else Color.Transparent)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Artwork.resId(station)?.let { resId ->
+            Image(
+                bitmap = ImageBitmap.imageResource(resId),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                filterQuality = FilterQuality.None,
+                modifier = Modifier
+                    .size(44.dp)
+                    .border(1.dp, rowAccent.copy(alpha = 0.7f)),
+            )
+        }
+        Text(
+            text = station.name,
+            color = if (selected) rowAccent else Color.White,
+            fontSize = 16.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            modifier = Modifier.weight(1f),
+        )
+        if (selected) {
+            Icon(
+                imageVector = Icons.Filled.GraphicEq,
+                contentDescription = "Now playing",
+                tint = rowAccent,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }

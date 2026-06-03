@@ -12,16 +12,42 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             background
-            VStack(spacing: 28) {
-                Spacer()
-                stationHeader
-                Spacer()
-                transportControls
-                Spacer()
-                stationPicker
-                    .padding(.bottom, 24)
+            GeometryReader { geo in
+                if geo.size.width > geo.size.height {
+                    // Landscape: cover on the left, controls on the right, so the
+                    // short vertical axis doesn't push anything off-screen.
+                    HStack(spacing: 32) {
+                        coverView(size: min(geo.size.height * 0.82, geo.size.width * 0.42))
+                            .frame(maxWidth: .infinity)
+                        VStack(spacing: 20) {
+                            trackInfo
+                            trackActions
+                            transportControls
+                            stationPicker
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .padding(.horizontal, 24)
+                    .frame(width: geo.size.width, height: geo.size.height)
+                } else {
+                    // Portrait: a single centred vertical stack.
+                    VStack(spacing: 28) {
+                        Spacer()
+                        VStack(spacing: 16) {
+                            coverView(size: 224)
+                            trackInfo
+                            trackActions
+                        }
+                        Spacer()
+                        transportControls
+                        Spacer()
+                        stationPicker
+                            .padding(.bottom, 24)
+                    }
+                    .padding(.horizontal, 24)
+                    .frame(width: geo.size.width, height: geo.size.height)
+                }
             }
-            .padding(.horizontal, 24)
         }
         .foregroundStyle(.white)
         .preferredColorScheme(.dark)
@@ -57,23 +83,21 @@ struct ContentView: View {
         .ignoresSafeArea()
     }
 
-    private var stationHeader: some View {
+    /// Station name + the live "Artist — Title" line (no cover/chips) so the
+    /// landscape layout can place them beside the cover.
+    private var trackInfo: some View {
         VStack(spacing: 16) {
-            cover
-
             Text(store.current?.name ?? "Tap play to start")
                 .font(.title.bold())
                 .multilineTextAlignment(.center)
 
-            // Reserve both lines so a wrapping title doesn't nudge the cover /
-            // station name up and down as tracks change.
+            // Reserve both lines so a wrapping title doesn't nudge the layout as
+            // tracks change.
             Text(store.nowPlaying?.display.isEmpty == false ? store.nowPlaying!.display : "Nightride FM")
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .lineLimit(2, reservesSpace: true)
-
-            trackActions
         }
     }
 
@@ -97,18 +121,18 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private var cover: some View {
+    private func coverView(size: CGFloat) -> some View {
         if let station = store.current, let image = Artwork.image(for: station) {
             Image(uiImage: image)
                 .resizable()
                 .interpolation(.none)   // keep the pixel art crisp when scaled
                 .scaledToFit()
-                .frame(width: 224, height: 224)
+                .frame(width: size, height: size)
                 .overlay(Rectangle().strokeBorder(accent.opacity(0.6), lineWidth: 1))
                 .shadow(color: accent.opacity(0.5), radius: 24)
         } else {
             Image(systemName: store.isPlaying ? "waveform" : "moon.stars")
-                .font(.system(size: 80))
+                .font(.system(size: min(size * 0.36, 80)))
                 .symbolEffect(.variableColor.iterative,
                               options: .repeating,
                               isActive: store.isPlaying)
