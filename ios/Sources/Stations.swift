@@ -40,3 +40,15 @@ enum Stations {
         .nightride("rektory",     "Rektory",      0xC9A86A),
     ]
 }
+
+extension Stations {
+    /// Rekt.Network streams live outside nightride.fm's main picker.
+    private static let rektIDs: Set<String> = ["rekt", "rektory"]
+
+    /// Header-titled groups for sectioned list UIs (e.g. CarPlay), mirroring the
+    /// site's split between the main stations and the Rekt.Network extras.
+    static let grouped: [(title: String, stations: [Station])] = [
+        ("Stations",     all.filter { !rektIDs.contains($0.id) }),
+        ("Rekt.Network", all.filter {  rektIDs.contains($0.id) }),
+    ]
+}

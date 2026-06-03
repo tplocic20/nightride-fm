@@ -46,24 +46,45 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     // MARK: – Station list
 
     private func makeStationList() -> CPListTemplate {
-        let items: [CPListItem] = Stations.all.map { station in
-            let item = CPListItem(text: station.name,
-                                  detailText: subtitle(for: station),
-                                  image: Artwork.image(for: station))
-            item.isPlaying = isLive(station)
-            item.handler = { [weak self] _, completion in
-                Task { @MainActor in
-                    PlayerStore.shared.play(station)
-                    self?.pushNowPlaying(animated: true)
-                    completion()
-                }
+        let sections: [CPListSection] = Stations.grouped
+            .filter { !$0.stations.isEmpty }
+            .map { group in
+                let items = group.stations.map(makeRow)
+                return CPListSection(items: items, header: group.title, sectionIndexTitle: nil)
             }
-            rows[station.id] = item
-            return item
-        }
-        let template = CPListTemplate(title: "Nightride", sections: [CPListSection(items: items)])
+        let template = CPListTemplate(title: "Nightride", sections: sections)
         template.tabImage = UIImage(systemName: "waveform")
         return template
+    }
+
+    private func makeRow(for station: Station) -> CPListItem {
+        let item = CPListItem(text: station.name,
+                              detailText: subtitle(for: station),
+                              image: rowArt(for: station))
+        item.isPlaying = isLive(station)
+        item.handler = { [weak self] _, completion in
+            Task { @MainActor in
+                PlayerStore.shared.play(station)
+                self?.pushNowPlaying(animated: true)
+                completion()
+            }
+        }
+        rows[station.id] = item
+        return item
+    }
+
+    /// A small, crisp thumbnail of the station cover. CarPlay smooth-scales row
+    /// images, which blurs the pixel art (the 1024² source is also wastefully
+    /// large to hand the car), so pre-render a nearest-neighbour downscale —
+    /// matching the phone UI's `.interpolation(.none)`.
+    private func rowArt(for station: Station) -> UIImage? {
+        guard let source = Artwork.image(for: station) else { return nil }
+        let side: CGFloat = 96
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side))
+        return renderer.image { ctx in
+            ctx.cgContext.interpolationQuality = .none
+            source.draw(in: CGRect(origin: .zero, size: CGSize(width: side, height: side)))
+        }
     }
 
     /// Patch each row's subtitle + now-playing indicator in place whenever the
