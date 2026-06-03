@@ -115,6 +115,7 @@ class PlaybackService : MediaLibraryService() {
             .setArtist(split.artist)
             .setStation(station.name)
             .setSubtitle(raw)  // raw "Artist - Title" for the phone UI to display
+            .setArtworkUri(Artwork.uri(this, station))
             .setIsBrowsable(false)
             .setIsPlayable(true)
             .setMediaType(MediaMetadata.MEDIA_TYPE_RADIO_STATION)
@@ -125,6 +126,19 @@ class PlaybackService : MediaLibraryService() {
             player.currentMediaItemIndex,
             item.buildUpon().setMediaMetadata(metadata).build(),
         )
+    }
+
+    /**
+     * A browse-tree entry for Android Auto: the station's cover art plus, when
+     * known, its current live track as the subtitle.
+     */
+    private fun browseItem(station: Station): MediaItem {
+        val base = station.toMediaItem(this)
+        val raw = latestMeta[station.id].orEmpty()
+        if (raw.isEmpty()) return base
+        return base.buildUpon()
+            .setMediaMetadata(base.mediaMetadata.buildUpon().setSubtitle(raw).build())
+            .build()
     }
 
     private inner class LibrarySessionCallback : MediaLibrarySession.Callback {
@@ -156,7 +170,7 @@ class PlaybackService : MediaLibraryService() {
             pageSize: Int,
             params: LibraryParams?,
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-            val children = ImmutableList.copyOf(Stations.all.map { it.toMediaItem() })
+            val children = ImmutableList.copyOf(Stations.all.map { browseItem(it) })
             return Futures.immediateFuture(LibraryResult.ofItemList(children, params))
         }
 
@@ -170,7 +184,7 @@ class PlaybackService : MediaLibraryService() {
             mediaItems: MutableList<MediaItem>,
         ): ListenableFuture<MutableList<MediaItem>> {
             val resolved = mediaItems.map { request ->
-                Stations.byId(request.mediaId)?.toMediaItem() ?: request
+                Stations.byId(request.mediaId)?.toMediaItem(this@PlaybackService) ?: request
             }.toMutableList()
             return Futures.immediateFuture(resolved)
         }

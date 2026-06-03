@@ -59,7 +59,7 @@ class PlayerController(private val context: Context) {
 
     fun play(station: Station) {
         val c = controller ?: return
-        c.setMediaItem(station.toMediaItem())
+        c.setMediaItem(station.toMediaItem(context))
         c.prepare()
         c.play()
     }
