@@ -13,7 +13,30 @@ struct ContentView: View {
         ZStack {
             background
             GeometryReader { geo in
-                if geo.size.width > geo.size.height {
+                if min(geo.size.width, geo.size.height) >= 600 {
+                    // Tablet: Spotify-style split — a responsive grid of station
+                    // covers fills the left, the simple vertical "now playing"
+                    // column sits on the right.
+                    HStack(spacing: 0) {
+                        stationGrid
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                        VStack(spacing: 20) {
+                            coverView(size: 200)
+                            trackInfo
+                            trackActions
+                            transportControls
+                        }
+                        .padding(28)
+                        .frame(width: 420)
+                        .frame(maxHeight: .infinity)
+                        .background(Color(hex: 0x140E1A).opacity(0.5))
+                        .overlay(alignment: .leading) {
+                            Rectangle().fill(accent.opacity(0.2)).frame(width: 1)
+                        }
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height)
+                } else if geo.size.width > geo.size.height {
                     // Landscape: cover on the left, controls on the right, so the
                     // short vertical axis doesn't push anything off-screen.
                     HStack(spacing: 32) {
@@ -68,6 +91,57 @@ struct ContentView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
             withAnimation(.easeInOut(duration: 0.25)) { copied = false }
         }
+    }
+
+    /// Responsive grid of station covers — iPad's left pane. Vertically centred,
+    /// and scrolls only if the covers ever exceed the height.
+    private var stationGrid: some View {
+        GeometryReader { proxy in
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 16)], spacing: 16) {
+                    ForEach(Stations.all) { station in
+                        stationTile(station)
+                    }
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func stationTile(_ station: Station) -> some View {
+        let isCurrent = store.current?.id == station.id
+        Button {
+            store.play(station)
+        } label: {
+            VStack(spacing: 8) {
+                Group {
+                    if let image = Artwork.image(for: station) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .interpolation(.none)
+                            .scaledToFit()
+                    } else {
+                        Color(hex: 0x140E1A)
+                    }
+                }
+                .aspectRatio(1, contentMode: .fit)
+                .overlay(
+                    Rectangle().strokeBorder(
+                        isCurrent ? station.accent : .white.opacity(0.15),
+                        lineWidth: isCurrent ? 2 : 1
+                    )
+                )
+                .shadow(color: isCurrent ? station.accent.opacity(0.5) : .clear, radius: 12)
+
+                Text(station.name.lowercased())
+                    .font(.system(size: 13, design: .monospaced))
+                    .foregroundStyle(isCurrent ? station.accent : .white.opacity(0.8))
+                    .lineLimit(1)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: – Subviews
@@ -220,6 +294,8 @@ private struct ActionChip: View {
             Text(label)
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.85))
+                .lineLimit(1)
+                .fixedSize()
                 .padding(.vertical, 6)
                 .padding(.horizontal, 12)
                 .overlay(

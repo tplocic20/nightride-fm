@@ -8,6 +8,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -115,15 +122,43 @@ fun PlayerScreen(player: PlayerController) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(horizontal = 24.dp, vertical = 24.dp),
+                .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
-            if (maxWidth > maxHeight) {
+            if (minOf(maxWidth, maxHeight) >= 600.dp) {
+                // Tablet: Spotify-style split — a responsive grid of station covers
+                // fills the left, the simple vertical "now playing" column on the right.
+                Row(modifier = Modifier.fillMaxSize()) {
+                    StationGrid(
+                        player = player,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                    )
+                    Box(
+                        Modifier
+                            .width(1.dp)
+                            .fillMaxHeight()
+                            .background(accent.copy(alpha = 0.2f))
+                    )
+                    Column(
+                        modifier = Modifier
+                            .width(420.dp)
+                            .fillMaxHeight()
+                            .background(Color(0xFF140E1A).copy(alpha = 0.5f))
+                            .padding(28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
+                    ) {
+                        Cover(player, accent, 200.dp)
+                        TrackInfo(player)
+                        TrackActions(player, accent) { copied = true }
+                        TransportControls(player, accent)
+                    }
+                }
+            } else if (maxWidth > maxHeight) {
                 // Landscape: cover on the left, controls on the right, so nothing
                 // gets pushed off the short vertical axis.
                 val coverSize = minOf(maxHeight * 0.82f, maxWidth * 0.42f)
                 Row(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -144,7 +179,7 @@ fun PlayerScreen(player: PlayerController) {
             } else {
                 // Portrait: a single centred vertical stack.
                 Column(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceEvenly,
                 ) {
@@ -255,6 +290,8 @@ private fun ActionChip(label: String, accent: Color, onClick: () -> Unit) {
         fontSize = 12.sp,
         fontWeight = FontWeight.Medium,
         fontFamily = FontFamily.Monospace,
+        maxLines = 1,
+        softWrap = false,
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
@@ -391,6 +428,61 @@ private fun StationRow(station: Station, selected: Boolean, onClick: () -> Unit)
                 modifier = Modifier.size(20.dp),
             )
         }
+    }
+}
+
+/** Responsive grid of station covers — the tablet left pane. */
+@Composable
+private fun StationGrid(player: PlayerController, modifier: Modifier = Modifier) {
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 150.dp),
+        modifier = modifier,
+        contentPadding = PaddingValues(24.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+    ) {
+        items(Stations.all) { station ->
+            StationTile(station, selected = player.current?.id == station.id) {
+                player.play(station)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StationTile(station: Station, selected: Boolean, onClick: () -> Unit) {
+    val accent = station.accentColor()
+    Column(
+        modifier = Modifier.clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        val coverModifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .border(
+                width = if (selected) 2.dp else 1.dp,
+                color = if (selected) accent else Color.White.copy(alpha = 0.15f),
+            )
+        val resId = Artwork.resId(station)
+        if (resId != null) {
+            Image(
+                bitmap = ImageBitmap.imageResource(resId),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                filterQuality = FilterQuality.None,
+                modifier = coverModifier,
+            )
+        } else {
+            Box(coverModifier.background(Color(0xFF140E1A)))
+        }
+        Spacer(Modifier.size(8.dp))
+        Text(
+            text = station.name.lowercase(),
+            color = if (selected) accent else Color.White.copy(alpha = 0.8f),
+            fontSize = 13.sp,
+            fontFamily = FontFamily.Monospace,
+            maxLines = 1,
+        )
     }
 }
 
