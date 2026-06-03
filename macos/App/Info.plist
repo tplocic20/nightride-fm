@@ -7,7 +7,7 @@
     <key>CFBundleDisplayName</key>
     <string>Nightride</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.plocic.nightride</string>
+    <string>dev.plocic.nightride.mac</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleShortVersionString</key>

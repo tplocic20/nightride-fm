@@ -16,7 +16,9 @@ final class PlayerStore: ObservableObject {
     private var meta: MetaStream?
     /// Latest known track per station id — kept warm so selecting a station
     /// shows its current track instantly, instead of waiting for the next change.
-    private var latestMeta: [String: TrackMeta] = [:]
+    /// Published so the CarPlay station list can show every station's live track
+    /// and patch its rows when the feed updates.
+    @Published private(set) var latestMeta: [String: TrackMeta] = [:]
     private var rateObserver: NSKeyValueObservation?
 
     init() {
@@ -32,6 +34,11 @@ final class PlayerStore: ObservableObject {
         // Connect to the metadata feed at launch so every station's current
         // track is cached before the user ever hits play.
         startMeta()
+
+        // Install transport commands here (once), not from a SwiftUI .onAppear —
+        // the car can launch the app straight into CarPlay with no phone view,
+        // and the Lock Screen / Now Playing / CarPlay buttons must still work.
+        RemoteCommands.install(self)
     }
 
     deinit { rateObserver?.invalidate() }

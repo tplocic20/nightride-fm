@@ -10,7 +10,6 @@ struct NightrideApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(store)
-                .onAppear { RemoteCommands.install(store) }
         }
     }
 }

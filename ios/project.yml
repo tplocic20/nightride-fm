@@ -1,14 +1,15 @@
 # xcodegen project definition for the iOS Nightride app.
 # Regenerate the .xcodeproj with `xcodegen generate` (or run ./build.sh).
 #
-# The CarPlay code is unconditionally compiled in. To actually activate it,
-# you need to:
-#   1. Replace App/Nightride.entitlements with App/Nightride.carplay.entitlements
-#      (which adds `com.apple.developer.carplay-audio`)
+# The CarPlay code is unconditionally compiled in. To actually activate it:
+#   1. Build with CARPLAY=1 (e.g. `CARPLAY=1 bash build.sh`), which points
+#      CODE_SIGN_ENTITLEMENTS at App/Nightride.carplay.entitlements (the file
+#      that adds `com.apple.developer.carplay-audio`).
 #   2. Have a provisioning profile that carries the CarPlay entitlement —
 #      Apple grants that on request after Developer Program enrollment.
 # Without those, the app still builds & runs fine on iPhone; CarPlay just
-# never activates.
+# never activates. The iOS Simulator does NOT enforce the entitlement, so a
+# CARPLAY=1 Simulator build lets you test the CarPlay UI before Apple grants it.
 
 name: Nightride
 
@@ -56,7 +57,9 @@ targets:
     settings:
       base:
         INFOPLIST_FILE: App/Info.plist
-        CODE_SIGN_ENTITLEMENTS: App/Nightride.entitlements
+        # App/Nightride.entitlements by default; App/Nightride.carplay.entitlements
+        # when CARPLAY=1. Set by build.sh — see its header.
+        CODE_SIGN_ENTITLEMENTS: ${ENTITLEMENTS}
         SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
         SUPPORTS_MACCATALYST: NO
         # Bundle id must be globally unique to Apple's signing servers.
