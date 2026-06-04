@@ -56,7 +56,9 @@ Bundle id for both channels: `dev.plocic.nightride.mac`.
 ### B. Mac App Store channel
 
 1. **Register the bundle id** `dev.plocic.nightride.mac` (developer.apple.com ▸
-   Identifiers) and enable the **App Sandbox** capability.
+   Identifiers ▸ App IDs). No special capabilities are needed — the App Sandbox
+   is applied at sign time via `App/Nightride.appstore.entitlements`, not as an
+   App ID capability.
 2. **Create the app record** in App Store Connect (My Apps ▸ +): platform macOS,
    the bundle id above, an SKU, primary language.
 3. **Certificates** (developer.apple.com ▸ Certificates):
