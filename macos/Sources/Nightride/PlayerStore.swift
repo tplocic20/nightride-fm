@@ -17,7 +17,6 @@ final class PlayerStore: ObservableObject {
     /// shows its current track instantly, instead of waiting for the next change.
     private var latestMeta: [String: TrackMeta] = [:]
     private var rateObserver: NSKeyValueObservation?
-    private let discord = DiscordRPC(clientID: "1396017162425991279")
 
     init() {
         rateObserver = player.observe(\.rate, options: [.new]) { [weak self] _, change in
@@ -53,7 +52,6 @@ final class PlayerStore: ObservableObject {
         player.play()
 
         refreshNowPlaying()
-        discord.update(activity: discordActivity())
     }
 
     func togglePlayPause() {
@@ -71,7 +69,6 @@ final class PlayerStore: ObservableObject {
     func pause() {
         player.pause()
         refreshNowPlaying()
-        discord.update(activity: nil)
     }
 
     func next() { step(+1) }
@@ -103,7 +100,6 @@ final class PlayerStore: ObservableObject {
         guard let cur = current, let track = updates[cur.id] else { return }
         withAnimation(Theme.transition) { nowPlaying = track }
         refreshNowPlaying()
-        discord.update(activity: discordActivity())
     }
 
     // MARK: – Now Playing widget (Control Center / media keys / lock screen)
@@ -147,19 +143,5 @@ final class PlayerStore: ObservableObject {
         let art = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
         artworkCache[station.id] = art
         return art
-    }
-
-    // MARK: – Discord
-
-    private func discordActivity() -> DiscordRPC.Activity? {
-        guard let cur = current, isPlaying else { return nil }
-        let track = nowPlaying ?? .init(artist: "", title: "", album: "")
-        return DiscordRPC.Activity(
-            details: "Listening to \(cur.name)",
-            state: track.isEmpty ? cur.name : track.display,
-            startTimestamp: startedAt,
-            largeImage: cur.id == "nightride" ? "nrfm" : cur.id,
-            largeText: track.title.isEmpty ? cur.name : track.title
-        )
     }
 }

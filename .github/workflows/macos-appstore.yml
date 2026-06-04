@@ -1,0 +1,143 @@
+# Build, sandbox-sign, package, and upload the macOS app to the MAC APP STORE.
+# This is the STORE channel — the sibling of macos-dmg.yml (direct-download).
+#
+# ──────────────────────────────────────────────────────────────────────────
+# ONE TAG FANS OUT TO EVERYTHING
+#   Push a version tag like `v0.2.0` and BOTH workflows run off it:
+#     • macos-dmg.yml      → notarized .dmg on a GitHub Release (download link)
+#     • macos-appstore.yml → signed .pkg uploaded to App Store Connect (this file)
+#   (Future: ios-appstore.yml / android-playstore.yml can hook the same `v*` tag.)
+#   Only the DMG job touches the GitHub Release, so the two never collide.
+#
+# This mirrors macos/release-appstore.sh, importing the signing material from
+# repo secrets into a throwaway keychain instead of a local login keychain.
+# ──────────────────────────────────────────────────────────────────────────
+# ONE-TIME SETUP — add these as repository secrets, and do the App Store Connect
+# steps in macos/DEPLOYMENT.md (register bundle id w/ App Sandbox, create the app
+# record + a "Mac App Store" provisioning profile + an ASC API key):
+#
+#   MAS_CERTS_P12_BASE64        Combined .p12 with BOTH the "Apple Distribution"
+#                               and "3rd Party Mac Developer Installer" certs
+#                               (+ keys), then: base64 -i certs.p12 | pbcopy
+#   MAS_CERTS_P12_PASSWORD      Password set when exporting that .p12.
+#   MAS_APP_IDENTITY            "Apple Distribution: Your Name (TEAMID)"
+#   MAS_INSTALLER_IDENTITY      "3rd Party Mac Developer Installer: Your Name (TEAMID)"
+#   MAS_PROVISION_PROFILE_BASE64  base64 of the .provisionprofile.
+#   ASC_KEY_ID                  App Store Connect API key id (10 chars).
+#   ASC_ISSUER_ID               App Store Connect API issuer id (uuid).
+#   ASC_API_KEY_P8_BASE64       base64 of the AuthKey_<ASC_KEY_ID>.p8 file.
+#
+# Until the secrets exist the job fails fast at "preflight".
+# ──────────────────────────────────────────────────────────────────────────
+
+name: macOS App Store
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Marketing version (e.g. 0.2.0). Defaults to the Info.plist value."
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-appstore-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: macos-14   # Apple silicon runner
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preflight — required secrets present?
+        env:
+          P12: ${{ secrets.MAS_CERTS_P12_BASE64 }}
+          APP_ID: ${{ secrets.MAS_APP_IDENTITY }}
+          INSTALLER_ID: ${{ secrets.MAS_INSTALLER_IDENTITY }}
+          PROFILE: ${{ secrets.MAS_PROVISION_PROFILE_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_P8: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+        run: |
+          missing=0
+          for v in P12 APP_ID INSTALLER_ID PROFILE ASC_KEY_ID ASC_ISSUER_ID ASC_P8; do
+            if [ -z "${!v}" ]; then echo "✗ missing secret: $v"; missing=1; fi
+          done
+          if [ "$missing" = 1 ]; then
+            echo "::error::App Store signing/upload secrets are not configured. See the header of .github/workflows/macos-appstore.yml and macos/DEPLOYMENT.md."
+            exit 1
+          fi
+
+      - name: Generate icons + artwork
+        run: |
+          brew install librsvg
+          cd assets
+          npm install --no-audit --no-fund
+          node icon.mjs
+          node generate.mjs
+
+      - name: Import signing certificates
+        env:
+          P12_BASE64: ${{ secrets.MAS_CERTS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.MAS_CERTS_P12_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/build.keychain"
+          KEYCHAIN_PW="$(openssl rand -base64 24)"
+          security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          echo "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/certs.p12"
+          # The .p12 holds BOTH the Apple Distribution and Mac Installer certs.
+          security import "$RUNNER_TEMP/certs.p12" -k "$KEYCHAIN" \
+            -P "$P12_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/productbuild -T /usr/bin/productsign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PW" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/certs.p12"
+
+      - name: Install provisioning profile
+        env:
+          PROFILE_BASE64: ${{ secrets.MAS_PROVISION_PROFILE_BASE64 }}
+        run: |
+          echo "$PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/Nightride.provisionprofile"
+          # Also drop it in the standard location (harmless; helps any tooling that looks there).
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$RUNNER_TEMP/Nightride.provisionprofile" "$HOME/Library/MobileDevice/Provisioning Profiles/"
+
+      - name: Store App Store Connect API key
+        env:
+          P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$P8_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
+
+      - name: Derive version
+        id: ver
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "marketing=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "marketing=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "build=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build → sign → pkg → upload
+        env:
+          MAS_APP_IDENTITY: ${{ secrets.MAS_APP_IDENTITY }}
+          MAS_INSTALLER_IDENTITY: ${{ secrets.MAS_INSTALLER_IDENTITY }}
+          PROVISION_PROFILE: ${{ runner.temp }}/Nightride.provisionprofile
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          MARKETING_VERSION: ${{ steps.ver.outputs.marketing }}
+          BUILD_NUMBER: ${{ steps.ver.outputs.build }}
+        run: |
+          cd macos
+          bash release-appstore.sh

@@ -1,0 +1,27 @@
+# Fast PR check: make sure the macOS app still compiles. No signing, no secrets.
+# Keeps the release workflows (macos-dmg.yml / macos-appstore.yml) from being the
+# first place a build break is noticed.
+
+name: macOS CI
+
+on:
+  pull_request:
+    paths:
+      - "macos/**"
+      - ".github/workflows/macos-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: macos-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-14   # Apple silicon runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: swift build (release)
+        run: |
+          cd macos
+          swift build -c release --arch arm64
