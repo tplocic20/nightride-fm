@@ -73,6 +73,21 @@ cp "App/Info.plist" "${APP}/Contents/Info.plist"
 cp ../assets/artwork/*.png "${RES_DIR}/" 2>/dev/null || echo "  (no artwork — run: cd assets && bun run build)"
 cp "App/Nightride.icns" "${RES_DIR}/Nightride.icns" 2>/dev/null || echo "  (no icon — run: cd assets && node icon.mjs)"
 
+# --- 1b. Stamp the version into the bundle's Info.plist ----------------------
+# The source App/Info.plist keeps placeholder version values; CI overrides them
+# per release: MARKETING_VERSION from the git tag (e.g. v0.2.0 → 0.2.0) and
+# BUILD_NUMBER from the run number. Run locally with neither set and the baked-in
+# values are used unchanged.
+PLIST="${APP}/Contents/Info.plist"
+if [[ -n "${MARKETING_VERSION:-}" ]]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${MARKETING_VERSION}" "${PLIST}"
+  echo "→ marketing version: ${MARKETING_VERSION}"
+fi
+if [[ -n "${BUILD_NUMBER:-}" ]]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" "${PLIST}"
+  echo "→ build number: ${BUILD_NUMBER}"
+fi
+
 # --- 2. Developer-ID sign with Hardened Runtime -----------------------------
 # --options runtime enables the Hardened Runtime (required for notarization);
 # --timestamp adds a secure timestamp (also required). Deep-sign so any nested

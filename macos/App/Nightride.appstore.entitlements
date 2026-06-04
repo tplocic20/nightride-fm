@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Mac App Store build. Unlike the direct-download build
+         (Nightride.entitlements), the App Store MANDATES the App Sandbox.
+
+         The app's only network use is outbound HTTPS: the audio stream, the
+         now-playing metadata feed, and the (user-tapped) iTunes/music search
+         links. network.client covers all of it. No server, no inbound
+         connections, no file access beyond the bundle — so nothing else is
+         needed. (Discord Rich Presence, which used an out-of-sandbox socket,
+         was removed, so there is no socket exception to request.) -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+</dict>
+</plist>

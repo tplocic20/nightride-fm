@@ -2,16 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Minimal entitlements for a Developer-ID, notarized, Hardened-Runtime
-         build. We deliberately do NOT use the App Sandbox: this is a direct
-         download (not Mac App Store), and sandboxing would complicate the
-         menu-bar / Now Playing / media-key integration for no benefit here.
+    <!-- Minimal entitlements for the Developer-ID, notarized, Hardened-Runtime
+         direct-download build. The App Sandbox is deliberately NOT used here
+         (that is only for the Mac App Store build, see
+         Nightride.appstore.entitlements); sandboxing would complicate the
+         menu-bar / Now Playing / media-key integration for no benefit in a
+         direct download.
 
-         Hardened Runtime is on (set via codesign --options runtime in
-         release.sh); these keys only relax it where the app genuinely needs it.
-         Networking is outbound HTTP(S) to the stream + meta feed; no special
-         client entitlement is required outside the sandbox, so the list is
-         intentionally empty. Add JIT / dyld exceptions here only if a future
-         dependency demands them. -->
+         Hardened Runtime is enabled via the codesign runtime option in
+         release.sh. Networking is outbound HTTP(S) to the stream and meta feed,
+         which needs no special entitlement outside the sandbox, so this list is
+         intentionally empty. Add JIT or dyld exceptions here only if a future
+         dependency requires them. -->
 </dict>
 </plist>

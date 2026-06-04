@@ -33,6 +33,10 @@ on:
 permissions:
   contents: write       # needed to create the GitHub Release
 
+concurrency:
+  group: macos-dmg-${{ github.ref }}
+  cancel-in-progress: false   # never abort an in-flight notarize/release
+
 jobs:
   build:
     runs-on: macos-14   # Apple silicon runner
@@ -93,11 +97,22 @@ jobs:
           xcrun notarytool store-credentials nightride-notary \
             --apple-id "$AC_ID" --team-id "$AC_TEAM" --password "$AC_PW"
 
+      - name: Derive version
+        id: ver
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "marketing=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "build=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
       - name: Build → sign → notarize → DMG
         env:
           # release.sh auto-detects the identity, but pin it explicitly in CI.
           DEV_ID_APP: ${{ secrets.MACOS_SIGN_IDENTITY }}
           NOTARY_PROFILE: nightride-notary
+          # Stamp the release version (marketing from the tag, build from the run).
+          MARKETING_VERSION: ${{ steps.ver.outputs.marketing }}
+          BUILD_NUMBER: ${{ steps.ver.outputs.build }}
         run: |
           cd macos
           bash release.sh
