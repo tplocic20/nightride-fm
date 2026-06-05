@@ -1,0 +1,43 @@
+# Fast PR check: make sure the iOS app still compiles. No signing, no secrets.
+# Keeps the release workflow (ios-appstore.yml) from being the first place a
+# build break is noticed. Builds for the Simulator, so no provisioning is needed.
+
+name: iOS CI
+
+on:
+  pull_request:
+    paths:
+      - "ios/**"
+      - "assets/**"
+      - ".github/workflows/ios-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-14   # Apple silicon runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: |
+          cd ios
+          bash build.sh
+
+      - name: xcodebuild (Simulator, no signing)
+        run: |
+          cd ios
+          xcodebuild \
+            -project Nightride.xcodeproj \
+            -scheme Nightride \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            build \
+            CODE_SIGNING_ALLOWED=NO

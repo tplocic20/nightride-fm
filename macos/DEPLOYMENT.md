@@ -23,16 +23,18 @@ That single `v*` tag triggers **both** workflows in parallel:
 - **macos-dmg** builds → notarizes → publishes the `.dmg` on a GitHub Release.
 - **macos-appstore** builds → signs → uploads the `.pkg` to App Store Connect.
 
-Only the DMG workflow touches the GitHub Release, so they never collide. Each
-workflow also has a **Run workflow** button (`workflow_dispatch`) for manual runs.
+The same `v*` tag also drives **iOS** (`ios-appstore.yml` → `.ipa` to App Store
+Connect — see [../ios/DEPLOYMENT.md](../ios/DEPLOYMENT.md)). Only the DMG workflow
+touches the GitHub Release, so they never collide. Each workflow also has a
+**Run workflow** button (`workflow_dispatch`) for manual runs.
 
 Version stamping (both channels): `CFBundleShortVersionString` comes from the tag
 (`v0.2.0` → `0.2.0`); `CFBundleVersion` comes from the GitHub run number (monotonic,
 which the App Store requires per upload). The source `App/Info.plist` keeps
 placeholder values; CI overrides them per build.
 
-> **Future:** iOS App Store and Android Play Store workflows can hook the same
-> `v*` tag. Today this is **macOS only**.
+> **iOS** hooks the same `v*` tag today (`ios-appstore.yml`). An Android Play
+> Store workflow can hook it next.
 
 After the App Store upload, the build appears under the app's macOS builds in
 App Store Connect once processing finishes. **Metadata, screenshots, and
@@ -44,7 +46,8 @@ delivers the binary.
 ## One-time setup
 
 You need a **paid Apple Developer Program** membership (Team ID `4527SA6RSX`).
-Bundle id for both channels: `dev.plocic.nightride.mac`.
+Bundle id for both channels: `dev.plocic.nightride` — **shared with iOS**, so both
+platforms live under one App Store Connect record (see [../ios/DEPLOYMENT.md](../ios/DEPLOYMENT.md)).
 
 ### A. Direct-download channel (Developer ID + notarization)
 
@@ -55,7 +58,7 @@ Bundle id for both channels: `dev.plocic.nightride.mac`.
 
 ### B. Mac App Store channel
 
-1. **Register the bundle id** `dev.plocic.nightride.mac` (developer.apple.com ▸
+1. **Register the bundle id** `dev.plocic.nightride` (developer.apple.com ▸
    Identifiers ▸ App IDs). No special capabilities are needed — the App Sandbox
    is applied at sign time via `App/Nightride.appstore.entitlements`, not as an
    App ID capability.

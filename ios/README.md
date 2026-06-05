@@ -3,6 +3,10 @@
 Native iPhone / iPad client for [Nightride FM](https://nightride.fm), with
 CarPlay scaffolding ready to activate once Apple grants the entitlement.
 
+> **Shipping to the App Store?** This README covers building and sideloading to
+> your own device. For the signed CI pipeline that uploads to App Store Connect
+> off a `v*` tag, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 | Feature                                | Works on free Apple ID? | Works with paid account? |
 |----------------------------------------|--------------------------|---------------------------|
 | Phone UI, background audio, Lock Screen/Control Center controls, AirPods | ✅ | ✅ |
@@ -24,10 +28,10 @@ open Nightride.xcodeproj
 2. Select the `Nightride` target → **Signing & Capabilities**.
 3. Set **Team** to your name (Personal Team).
 4. If Xcode complains the bundle id is already in use, change it (any unique
-   string works, e.g. `fm.nightride.ios.tomasz`). To make the change permanent,
+   string works, e.g. `dev.plocic.nightride.tomasz`). To make the change permanent,
    regenerate the project with the override:
    ```bash
-   BUNDLE_ID=fm.nightride.ios.tomasz bash build.sh
+   BUNDLE_ID=dev.plocic.nightride.tomasz bash build.sh
    ```
 5. Plug your iPhone in and unlock it. The first time, you may need to
    **trust the computer** on the phone.
@@ -71,6 +75,9 @@ provisioning profile. Once you're enrolled in the Developer Program:
 ```
 ios/
 ├── project.yml                          # xcodegen source of truth
+├── build.sh                             # generate the .xcodeproj (Xcode/sideload)
+├── release-appstore.sh                  # archive → .ipa → App Store Connect
+├── DEPLOYMENT.md                        # App Store CI + secrets walkthrough
 ├── App/
 │   ├── Info.plist                       # UIBackgroundModes + CarPlay scene
 │   ├── Nightride.entitlements           # empty — free-signing friendly

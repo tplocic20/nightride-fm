@@ -16,7 +16,7 @@
 #   2. A "3rd Party Mac Developer Installer" (a.k.a. "Mac Installer Distribution")
 #      certificate + key in the keychain (signs the .pkg installer).
 #   3. A "Mac App Store" distribution provisioning profile for the bundle id
-#      dev.plocic.nightride.mac. Point PROVISION_PROFILE at the .provisionprofile
+#      dev.plocic.nightride. Point PROVISION_PROFILE at the .provisionprofile
 #      (default: App/Nightride.provisionprofile).
 #   4. An App Store Connect API key (.p8) saved as
 #        ~/.appstoreconnect/private_keys/AuthKey_<ASC_KEY_ID>.p8
@@ -82,7 +82,7 @@ if [[ ! -f "${PROVISION_PROFILE}" ]]; then
   cat <<MSG
 ✗ Provisioning profile not found at: ${PROVISION_PROFILE}
 
-  Download a "Mac App Store" distribution profile for dev.plocic.nightride.mac
+  Download a "Mac App Store" distribution profile for dev.plocic.nightride
   from developer.apple.com/account and save it there, or set PROVISION_PROFILE.
   See DEPLOYMENT.md.
 MSG

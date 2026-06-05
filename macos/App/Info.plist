@@ -7,7 +7,7 @@
     <key>CFBundleDisplayName</key>
     <string>Nightride.fm Player</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.plocic.nightride.mac</string>
+    <string>dev.plocic.nightride</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleShortVersionString</key>
@@ -22,6 +22,12 @@
     <string>public.app-category.music</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
+
+    <!-- Only standard HTTPS/TLS is used (stream + metadata). That counts as
+         exempt encryption, so declare it here to skip App Store Connect's
+         per-build export-compliance prompt. -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
