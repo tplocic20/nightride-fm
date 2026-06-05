@@ -36,6 +36,23 @@ and consume `https://nightride.fm/meta` for live track titles.
 - **iOS:** `cd ios && bash build.sh` → open `Nightride.xcodeproj` in Xcode → Run on simulator or your phone. See [`ios/README.md`](ios/README.md) for sideloading + CarPlay notes.
 - **Android:** open `android/` in Android Studio and hit Run, or `cd android && bash build.sh`. See [`android/README.md`](android/README.md) for Android Auto notes.
 
+## Releasing
+
+One command bumps the marketing version across **all three apps** in lockstep,
+then commits, tags, and pushes to `main`:
+
+```bash
+bash scripts/release.sh 0.2.0            # macOS + iOS + Android → commit → tag v0.2.0 → push main
+bash scripts/release.sh 0.2.0 --dry-run  # preview the plan, write nothing
+```
+
+The pushed `v*` tag fans out to the store workflows — `macos-dmg` (notarized
+`.dmg` on a GitHub Release), plus `macos-appstore` and `ios-appstore` (signed
+builds to App Store Connect / TestFlight). Build numbers come from the CI run
+number on iOS/macOS; Android's `versionCode` is derived from the version.
+Per-platform signing + secrets: [`macos/DEPLOYMENT.md`](macos/DEPLOYMENT.md),
+[`ios/DEPLOYMENT.md`](ios/DEPLOYMENT.md).
+
 ## Repo layout
 
 ```
