@@ -2,41 +2,37 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key>
-    <string>Nightride</string>
-    <key>CFBundleDisplayName</key>
-    <string>Nightride.fm Player</string>
-    <key>CFBundleIdentifier</key>
-    <string>dev.plocic.nightride</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
-    <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
-    <key>CFBundleExecutable</key>
-    <string>Nightride</string>
-    <key>CFBundleIconFile</key>
-    <string>Nightride</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>LSApplicationCategoryType</key>
-    <string>public.app-category.music</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-
-    <!-- Only standard HTTPS/TLS is used (stream + metadata). That counts as
-         exempt encryption, so declare it here to skip App Store Connect's
-         per-build export-compliance prompt. -->
-    <key>ITSAppUsesNonExemptEncryption</key>
-    <false/>
-    <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>NSSupportsAutomaticGraphicsSwitching</key>
-    <true/>
-    <key>NSHumanReadableCopyright</key>
-    <string>Nightride FM — fan-made macOS client</string>
+	<key>CFBundleDisplayName</key>
+	<string>Nightride.fm Player</string>
+	<key>CFBundleExecutable</key>
+	<string>Nightride</string>
+	<key>CFBundleIconFile</key>
+	<string>Nightride</string>
+	<key>CFBundleIdentifier</key>
+	<string>dev.plocic.nightride</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Nightride</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.2.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.music</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Nightride FM — fan-made macOS client</string>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
 </dict>
 </plist>
