@@ -18,14 +18,15 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-14   # Apple silicon runner
+    runs-on: macos-15   # Apple silicon; match the release toolchain (Xcode 26.x)
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 16+ (open xcodegen's format-77 project)
+      - name: Select newest Xcode (match release; open xcodegen project)
         run: |
-          # See ios-appstore.yml: xcodegen emits an Xcode-16 project format the
-          # runner's default Xcode 15.4 can't open. Pick the newest Xcode.
+          # Pick the newest installed Xcode so CI compiles against the same SDK
+          # the release uses (macos-15 ships Xcode 26.x), and so the xcodegen
+          # project format (object version 77) always opens. See ios-appstore.yml.
           newest="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
           if [ -z "$newest" ]; then echo "::error::no Xcode found on runner"; exit 1; fi
           echo "→ selecting $newest"
