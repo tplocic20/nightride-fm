@@ -93,6 +93,22 @@ echo "→ app identity:       ${MAS_APP_IDENTITY}"
 echo "→ installer identity: ${MAS_INSTALLER_IDENTITY}"
 echo "→ provisioning:       ${PROVISION_PROFILE}"
 
+# --- 0b. Read the provisioning profile's identifiers ------------------------
+# The App Store REQUIRES the binary's code signature to carry
+# com.apple.application-identifier (= TEAMID.bundleid). A full Xcode archive
+# injects it from the profile automatically; this manual `codesign` path does
+# NOT, which is exactly what trips ITMS-90886 on upload ("missing an application
+# identifier but has an application identifier in the provisioning profile").
+# Read the authoritative values straight out of the profile (a CMS-signed plist)
+# and merge them into the entitlements we sign with (step 3).
+TMP="$(mktemp -d)"
+trap 'rm -rf "${TMP}"' EXIT
+security cms -D -i "${PROVISION_PROFILE}" > "${TMP}/profile.plist" 2>/dev/null
+TEAM_ID="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "${TMP}/profile.plist")"
+APP_IDENTIFIER="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.application-identifier' "${TMP}/profile.plist")"
+echo "→ team:               ${TEAM_ID}"
+echo "→ app identifier:     ${APP_IDENTIFIER}"
+
 # --- 1. Build + assemble the bundle (same layout as release.sh) -------------
 echo "→ building Swift target (release)…"
 swift build -c release --arch arm64
@@ -126,9 +142,18 @@ cp "${PROVISION_PROFILE}" "${APP}/Contents/embedded.provisionprofile"
 # No --deep (deprecated; there is no nested code anyway). Hardened Runtime is
 # enabled to match Xcode's modern App Store archives; the sandbox entitlement is
 # the mandatory part for the store.
+#
+# Sign against the static entitlements (sandbox + network.client) PLUS the
+# application-identifier / team-identifier read from the profile in step 0b —
+# without these the upload is rejected from TestFlight with ITMS-90886.
+SIGN_ENTITLEMENTS="${TMP}/appstore.signing.entitlements"
+cp "${ENTITLEMENTS}" "${SIGN_ENTITLEMENTS}"
+/usr/libexec/PlistBuddy -c "Add :com.apple.application-identifier string ${APP_IDENTIFIER}" "${SIGN_ENTITLEMENTS}"
+/usr/libexec/PlistBuddy -c "Add :com.apple.developer.team-identifier string ${TEAM_ID}" "${SIGN_ENTITLEMENTS}"
+
 echo "→ codesigning (Apple Distribution + sandbox)…"
 codesign --force --timestamp --options runtime \
-  --entitlements "${ENTITLEMENTS}" \
+  --entitlements "${SIGN_ENTITLEMENTS}" \
   --sign "${MAS_APP_IDENTITY}" "${APP}"
 
 echo "→ verifying signature…"

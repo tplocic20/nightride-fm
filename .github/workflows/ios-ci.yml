@@ -22,6 +22,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Select Xcode 16+ (open xcodegen's format-77 project)
+        run: |
+          # See ios-appstore.yml: xcodegen emits an Xcode-16 project format the
+          # runner's default Xcode 15.4 can't open. Pick the newest Xcode.
+          newest="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$newest" ]; then echo "::error::no Xcode found on runner"; exit 1; fi
+          echo "→ selecting $newest"
+          sudo xcode-select -s "$newest/Contents/Developer"
+          xcodebuild -version
+          major="$(xcodebuild -version | sed -nE 's/^Xcode ([0-9]+).*/\1/p')"
+          if [ "${major:-0}" -lt 16 ]; then
+            echo "::error::need Xcode 16+ to open the generated project; got Xcode ${major:-?}"
+            exit 1
+          fi
+
       - name: Install xcodegen
         run: brew install xcodegen
 

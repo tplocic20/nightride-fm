@@ -58,6 +58,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Select Xcode 16+ (open xcodegen's format-77 project)
+        run: |
+          # Homebrew's xcodegen writes an Xcode-16 project format (objectVersion
+          # 77) that the macos-14 runner's DEFAULT Xcode 15.4 refuses to open
+          # ("future Xcode project file format (77)"). Switch to the newest Xcode
+          # the runner ships (macos-14 carries 16.x). Apple also requires the
+          # iOS 18 / Xcode 16 SDK for App Store uploads now, so this is needed
+          # regardless. The macOS jobs build via SwiftPM and are unaffected.
+          newest="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$newest" ]; then echo "::error::no Xcode found on runner"; exit 1; fi
+          echo "→ selecting $newest"
+          sudo xcode-select -s "$newest/Contents/Developer"
+          xcodebuild -version
+          major="$(xcodebuild -version | sed -nE 's/^Xcode ([0-9]+).*/\1/p')"
+          if [ "${major:-0}" -lt 16 ]; then
+            echo "::error::need Xcode 16+ to open the generated project; got Xcode ${major:-?}"
+            exit 1
+          fi
+
       - name: Preflight — required secrets present?
         env:
           P12: ${{ secrets.MAS_CERTS_P12_BASE64 }}
