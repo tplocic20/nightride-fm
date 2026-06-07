@@ -1,9 +1,8 @@
 # Nightride for macOS
 
 A small native menu-bar app for streaming [Nightride FM](https://nightride.fm).
-Plays through `AVPlayer`, registers with the macOS Now Playing widget, responds
-to the keyboard's media keys and to AirPods controls, and mirrors the currently
-playing track to Discord Rich Presence.
+Plays through `AVPlayer`, registers with the macOS Now Playing widget, and
+responds to the keyboard's media keys and to AirPods controls.
 
 Inspired by [`nightride-cli`](https://github.com/babycommando/nightride-cli) —
 this version trades the terminal for the menu bar.

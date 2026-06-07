@@ -1,5 +1,7 @@
 package dev.plocic.nightride.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -35,6 +37,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.NightlightRound
@@ -75,6 +78,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.sp
 import dev.plocic.nightride.Artwork
 import dev.plocic.nightride.BRAND
@@ -98,6 +102,8 @@ fun PlayerScreen(player: PlayerController) {
 
     // Brief "copied" confirmation, mirroring the iOS toast.
     var copied by remember { mutableStateOf(false) }
+    // Whether the "About" dialog (attribution + contact) is showing.
+    var showAbout by remember { mutableStateOf(false) }
     LaunchedEffect(copied) {
         if (copied) {
             delay(1400)
@@ -203,7 +209,113 @@ fun PlayerScreen(player: PlayerController) {
         ) {
             Toast("copied to clipboard", accent)
         }
+
+        // Discreet info button → "About" (attribution + contact).
+        IconButton(
+            onClick = { showAbout = true },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(4.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Info,
+                contentDescription = "About",
+                tint = Color.White.copy(alpha = 0.45f),
+            )
+        }
+
+        if (showAbout) {
+            AboutDialog(onDismiss = { showAbout = false })
+        }
     }
+}
+
+/**
+ * Small "About" dialog — personal attribution + where to reach the author.
+ * The repo is public, so bug reports go to GitHub Issues.
+ */
+@Composable
+private fun AboutDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val accent = Color(0xFFCC55FF)
+    val version = remember {
+        runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        }.getOrNull().orEmpty()
+    }
+
+    fun open(url: String) {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            color = Color(0xFF15101C),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, accent.copy(alpha = 0.4f)),
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Nightride.fm Player",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = FontFamily.Monospace,
+                )
+                if (version.isNotEmpty()) {
+                    Text(
+                        text = "v$version",
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
+                Text(
+                    text = "Made by Tomasz Plocic",
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 14.sp,
+                    fontFamily = FontFamily.Monospace,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    AboutChip("plocic.dev", accent) { open("https://plocic.dev") }
+                    AboutChip("report a bug ↗", accent) {
+                        open("https://github.com/tplocic20/nightride-fm/issues")
+                    }
+                }
+                Text(
+                    text = "Unofficial fan project — not affiliated with Nightride FM.",
+                    color = Color.White.copy(alpha = 0.4f),
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+/** Bordered mono link chip used inside the About dialog. */
+@Composable
+private fun AboutChip(label: String, accent: Color, onClick: () -> Unit) {
+    Text(
+        text = label,
+        color = accent,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium,
+        fontFamily = FontFamily.Monospace,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .border(1.dp, accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
 }
 
 @Composable

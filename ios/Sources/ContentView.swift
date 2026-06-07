@@ -6,6 +6,9 @@ struct ContentView: View {
     /// Brief "copied" confirmation state for the copy action chip.
     @State private var copied = false
 
+    /// Whether the "About" sheet (attribution + contact) is showing.
+    @State private var showAbout = false
+
     /// Current station's accent, or the Nightride magenta before anything plays.
     private var accent: Color { store.current?.accent ?? Color(hex: 0xCC55FF) }
 
@@ -82,6 +85,21 @@ struct ContentView: View {
                     .padding(.bottom, 36)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
+        }
+        .overlay(alignment: .topTrailing) {
+            // Discreet info button → "About" (attribution + contact).
+            Button { showAbout = true } label: {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.white.opacity(0.45))
+                    .padding(16)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("About")
+        }
+        .sheet(isPresented: $showAbout) {
+            AboutView().presentationDetents([.medium])
         }
     }
 
@@ -304,6 +322,86 @@ private struct ActionChip: View {
                 )
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Small "About" sheet — personal attribution + where to reach the author.
+/// The repo is public, so bug reports go to GitHub Issues.
+private struct AboutView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    private let accent = Color(hex: 0xCC55FF)
+
+    private var version: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+    }
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            // Full-bleed dark ground so the sheet matches the app's chrome.
+            Color(hex: 0x0E0A12).ignoresSafeArea()
+
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .padding(16)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close")
+
+            VStack(spacing: 12) {
+                Text("Nightride.fm Player")
+                    .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.white)
+                Text("v\(version)")
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.5))
+
+                Text("Made by Tomasz Plocic")
+                    .font(.system(size: 14, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .padding(.top, 2)
+
+                HStack(spacing: 10) {
+                    AboutLink(label: "plocic.dev",
+                              url: "https://plocic.dev", accent: accent)
+                    AboutLink(label: "report a bug ↗",
+                              url: "https://github.com/tplocic20/nightride-fm/issues", accent: accent)
+                }
+                .padding(.top, 2)
+
+                Text("Unofficial fan project — not affiliated with Nightride FM.")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.4))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 6)
+            }
+            .padding(28)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+/// Bordered mono link chip used inside the About sheet.
+private struct AboutLink: View {
+    let label: String
+    let url: String
+    let accent: Color
+
+    var body: some View {
+        Link(label, destination: URL(string: url)!)
+            .font(.system(size: 13, weight: .medium, design: .monospaced))
+            .foregroundStyle(accent)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(accent.opacity(0.5), lineWidth: 1)
+            )
     }
 }
 

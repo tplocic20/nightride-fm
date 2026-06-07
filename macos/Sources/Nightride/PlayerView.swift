@@ -180,6 +180,20 @@ struct PlayerView: View {
                     NSApplication.shared.terminate(nil)
                 }
             }
+
+            // Personal attribution + where to reach the author. The repo is
+            // public, so bug reports go to GitHub Issues.
+            HStack(spacing: 6) {
+                Text("made by")
+                    .font(Theme.mono(10))
+                    .foregroundStyle(Theme.onSurfaceVar.opacity(0.55))
+                LinkButton(label: "plocic.dev", url: "https://plocic.dev", size: 10)
+                Text("·")
+                    .font(Theme.mono(10))
+                    .foregroundStyle(Theme.onSurfaceVar.opacity(0.4))
+                LinkButton(label: "report a bug ↗",
+                           url: "https://github.com/tplocic20/nightride-fm/issues", size: 10)
+            }
         }
         .padding(.top, 2)
     }
@@ -304,6 +318,7 @@ private struct StationRow: View {
 private struct LinkButton: View {
     let label: String
     let url: String
+    var size: CGFloat = 11
 
     @State private var hover = false
 
@@ -312,7 +327,7 @@ private struct LinkButton: View {
             if let u = URL(string: url) { NSWorkspace.shared.open(u) }
         } label: {
             Text(label)
-                .font(Theme.mono(11))
+                .font(Theme.mono(size))
                 .foregroundStyle(hover ? Theme.secondary : Theme.onSurfaceVar.opacity(0.8))
                 .contentShape(Rectangle())
         }

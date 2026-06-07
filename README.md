@@ -23,7 +23,7 @@ more. No ads, no trackers, no accounts. Just the music, on the drive home.
 
 | Platform | Where                   | UI                     | Status                                                         |
 |----------|-------------------------|------------------------|----------------------------------------------------------------|
-| macOS    | [`macos/`](macos/)      | Menu-bar SwiftUI app   | ✅ Now Playing widget, media keys, AirPods, Discord Rich Presence |
+| macOS    | [`macos/`](macos/)      | Menu-bar SwiftUI app   | ✅ Now Playing widget, media keys, AirPods controls            |
 | iOS      | [`ios/`](ios/)          | SwiftUI app + CarPlay  | ✅ Lock-screen / Control Center / CarPlay (entitlement required) |
 | Android  | [`android/`](android/)  | Compose + Auto         | ✅ Notification / lock-screen / Android Auto (Media3)            |
 
@@ -90,7 +90,7 @@ save you the grep, here is the **complete** network and data behaviour:
 | `https://stream.nightride.fm/<station>.mp3` | while playing | the audio stream |
 | `https://nightride.fm/meta` | while open | live "now playing" track titles (server-sent events) |
 | Spotify / Apple Music / YouTube search URLs | **only when you tap** a chip | open that track in your music app |
-| Discord (local IPC) | if Discord is running | optional Rich Presence (macOS) — a **local** `/tmp` socket, never the internet |
+| nightride.fm · Discord invite · plocic.dev · GitHub Issues | **only when you tap** a link | open the site / community / author / bug tracker in your browser |
 
 **That's the whole list.** Specifically, this app has:
 
