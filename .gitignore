@@ -13,3 +13,9 @@ ios/Nightride.xcodeproj/
 
 # shared asset generator deps (artwork PNGs ARE committed)
 assets/node_modules/
+
+# Signing material — NEVER commit (also covered under android/, this is a
+# repo-wide backstop in case a keystore lands outside that dir)
+*.jks
+*.keystore
+keystore.properties

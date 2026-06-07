@@ -3,7 +3,7 @@
 # lockstep, then commit, tag (vX.Y.Z) and push to main.
 #
 # The pushed tag triggers the store workflows (macos-dmg, macos-appstore,
-# ios-appstore), which build the TAGGED commit. Because the bump happens BEFORE
+# ios-appstore, android-playstore, android-apk), which build the TAGGED commit. Because the bump happens BEFORE
 # the tag, the tagged commit already carries the right version everywhere — the
 # repo is the single source of truth, no post-tag sync.
 #
@@ -168,5 +168,5 @@ if ! git push origin "$TAG"; then
 fi
 
 echo "${GRN}✓ Released ${TAG}${RST}"
-echo "${DIM}macos-dmg, macos-appstore and ios-appstore will build the tagged commit.${RST}"
-echo "${DIM}DMG lands on a GitHub Release; the store builds land in App Store Connect (TestFlight).${RST}"
+echo "${DIM}macos-dmg, macos-appstore, ios-appstore, android-playstore and android-apk will build the tagged commit.${RST}"
+echo "${DIM}DMG + APK → GitHub Release; Apple builds → App Store Connect (TestFlight); Android → Play internal track.${RST}"
