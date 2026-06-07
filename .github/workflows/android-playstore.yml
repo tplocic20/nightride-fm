@@ -86,11 +86,20 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:bundleRelease --no-daemon
 
+      - name: Play "What's new" from CHANGELOG.md
+        run: |
+          mkdir -p distribution/whatsnew
+          NOTES="$(bash scripts/changelog.sh "${GITHUB_REF_NAME#v}" 2>/dev/null || true)"
+          [ -z "$NOTES" ] && NOTES="Bug fixes and improvements."
+          # Play caps release notes at 500 chars per locale.
+          printf '%s' "$NOTES" | head -c 500 > distribution/whatsnew/whatsnew-en-US
+
       - name: Upload to Google Play (internal track)
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: dev.plocic.nightride
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          whatsNewDirectory: distribution/whatsnew   # release notes from CHANGELOG.md
           track: internal     # promote to production from the Play Console
           status: completed

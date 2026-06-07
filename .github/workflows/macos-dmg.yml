@@ -117,9 +117,15 @@ jobs:
           cd macos
           bash release.sh
 
+      - name: Release notes from CHANGELOG.md
+        run: |
+          NOTES="$(bash scripts/changelog.sh "${GITHUB_REF_NAME#v}" 2>/dev/null || true)"
+          [ -n "$NOTES" ] && printf '%s\n' "$NOTES" > RELEASE_NOTES.md \
+            || echo "Release ${GITHUB_REF_NAME}." > RELEASE_NOTES.md
+
       - name: Upload DMG to the GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: macos/build/Nightride.dmg
+          body_path: RELEASE_NOTES.md   # from CHANGELOG.md; android-apk writes the same → no dupes
           fail_on_unmatched_files: true
-          generate_release_notes: true

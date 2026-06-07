@@ -99,6 +99,8 @@ echo "  ${DIM}commit \"chore(release): ${TAG}\", tag ${TAG}, push origin main + 
 echo "    ${DIM}${MAC_PLIST}${RST}              CFBundleShortVersionString → ${TARGET}"
 echo "    ${DIM}${IOS_YML}${RST}                 MARKETING_VERSION → ${TARGET}"
 echo "    ${DIM}${ANDROID_GRADLE}${RST}  versionName → ${TARGET}, versionCode ${CUR_CODE} → ${NEW_CODE}"
+[[ -f CHANGELOG.md ]] && grep -q '^## \[Unreleased\]' CHANGELOG.md \
+  && echo "    ${DIM}CHANGELOG.md${RST}              [Unreleased] → [${TARGET}] - $(date +%Y-%m-%d)"
 
 drift=()
 [[ "$CUR_IOS"     != "$CUR_MAC" ]] && drift+=("${IOS_YML} = ${CUR_IOS}")
@@ -151,6 +153,20 @@ sed_inplace "s/(versionCode[[:space:]]*=[[:space:]]*)[0-9]+/\1${NEW_CODE}/" "$AN
 [[ "$(read_ios)"          == "$TARGET"   ]] || die "failed to update $IOS_YML"
 [[ "$(read_android)"      == "$TARGET"   ]] || die "failed to update $ANDROID_GRADLE (versionName)"
 [[ "$(read_android_code)" == "$NEW_CODE" ]] || die "failed to update $ANDROID_GRADLE (versionCode)"
+
+# Stamp the changelog: turn the top "## [Unreleased]" into this version + date,
+# leaving a fresh empty [Unreleased] above it (Keep a Changelog). The tagged
+# commit then carries the notes CI publishes to the GitHub Release and Play.
+if [[ -f "CHANGELOG.md" ]] && grep -q '^## \[Unreleased\]' "CHANGELOG.md"; then
+  awk -v ver="$TARGET" -v date="$(date +%Y-%m-%d)" '
+    !done && /^## \[Unreleased\]/ {
+      print "## [Unreleased]"; print ""; print "## [" ver "] - " date
+      done = 1; next
+    }
+    { print }
+  ' "CHANGELOG.md" > "CHANGELOG.md.tmp" && mv "CHANGELOG.md.tmp" "CHANGELOG.md"
+  git add "CHANGELOG.md"
+fi
 
 git add "$MAC_PLIST" "$IOS_YML" "$ANDROID_GRADLE"
 git commit -q -m "chore(release): ${TAG}"
