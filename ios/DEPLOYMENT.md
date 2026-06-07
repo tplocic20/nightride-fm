@@ -41,7 +41,8 @@ delivers the binary.
 
 ## One-time setup
 
-You need a **paid Apple Developer Program** membership (Team ID `4527SA6RSX`).
+You need a **paid Apple Developer Program** membership and your own Team ID
+(the maintainer's is `4527SA6RSX` — a forker uses theirs instead).
 
 iOS and macOS **share one bundle id `dev.plocic.nightride` and one App Store
 Connect record** (a single "Nightride.fm Player" app available on iPhone, iPad,

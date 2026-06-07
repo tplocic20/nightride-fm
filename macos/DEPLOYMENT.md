@@ -45,7 +45,8 @@ delivers the binary.
 
 ## One-time setup
 
-You need a **paid Apple Developer Program** membership (Team ID `4527SA6RSX`).
+You need a **paid Apple Developer Program** membership and your own Team ID
+(the maintainer's is `4527SA6RSX` — a forker uses theirs instead).
 Bundle id for both channels: `dev.plocic.nightride` — **shared with iOS**, so both
 platforms live under one App Store Connect record (see [../ios/DEPLOYMENT.md](../ios/DEPLOYMENT.md)).
 

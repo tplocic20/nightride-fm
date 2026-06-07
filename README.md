@@ -90,6 +90,7 @@ save you the grep, here is the **complete** network and data behaviour:
 | `https://stream.nightride.fm/<station>.mp3` | while playing | the audio stream |
 | `https://nightride.fm/meta` | while open | live "now playing" track titles (server-sent events) |
 | Spotify / Apple Music / YouTube search URLs | **only when you tap** a chip | open that track in your music app |
+| `https://itunes.apple.com/search` | **only when you tap Apple Music** (iOS / Android) | resolve the exact track's catalog link — Apple's public, no-auth lookup; falls back to a plain search |
 | nightride.fm · Discord invite · plocic.dev · GitHub Issues | **only when you tap** a link | open the site / community / author / bug tracker in your browser |
 
 **That's the whole list.** Specifically, this app has:
@@ -105,8 +106,10 @@ save you the grep, here is the **complete** network and data behaviour:
   standard AndroidX / Jetpack Compose / Media3 / OkHttp — all mainstream, none
   for ads or tracking.
 
-The music-service buttons just build a **search URL** and hand it to the OS;
-they don't have (or want) access to your Spotify/Apple Music account.
+The music-service buttons just build a **search URL** and hand it to the OS
+(Apple Music on iOS/Android first does the no-auth catalog lookup above to
+land on the exact song); they don't have (or want) access to your
+Spotify/Apple Music account.
 
 ## Licence & contributing
 
