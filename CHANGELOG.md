@@ -9,6 +9,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 > the GitHub Release body and Google Play's "What's new".
 
 ## [Unreleased]
+
+## [1.0.1] - 2026-06-08
 ### Changed
 - macOS: link the canonical `discord.com/invite/synthwave` invite URL (the form
   used on nightride.fm) instead of the short `discord.gg` alias.
