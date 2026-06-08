@@ -9,6 +9,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 > the GitHub Release body and Google Play's "What's new".
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-06-08
 First public release — native Nightride.fm players for macOS, iOS and Android.
 
 ### Added
