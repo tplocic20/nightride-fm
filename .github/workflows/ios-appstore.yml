@@ -160,6 +160,10 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           MARKETING_VERSION: ${{ steps.ver.outputs.marketing }}
           BUILD_NUMBER: ${{ steps.ver.outputs.build }}
+          # CarPlay audio entitlement is granted on the team and the App Store
+          # provisioning profile (IOS_PROVISION_PROFILE_BASE64) carries the
+          # capability, so sign with App/Nightride.carplay.entitlements.
+          CARPLAY: "1"
         run: |
           cd ios
           bash release-appstore.sh
