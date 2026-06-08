@@ -19,3 +19,13 @@ assets/node_modules/
 *.jks
 *.keystore
 keystore.properties
+# Apple signing material + secrets (these live in GitHub Secrets / locally,
+# never in the repo) — backstop against an accidental `git add`.
+*.p8
+*.p12
+*.pem
+*.cer
+*.mobileprovision
+*.certSigningRequest
+.env
+.env.*
