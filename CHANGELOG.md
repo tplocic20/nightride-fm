@@ -9,6 +9,9 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 > the GitHub Release body and Google Play's "What's new".
 
 ## [Unreleased]
+### Changed
+- macOS: link the canonical `discord.com/invite/synthwave` invite URL (the form
+  used on nightride.fm) instead of the short `discord.gg` alias.
 
 ## [1.0.0] - 2026-06-08
 First public release — native Nightride.fm players for macOS, iOS and Android.

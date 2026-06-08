@@ -180,7 +180,7 @@ struct PlayerView: View {
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 GridRow {
                     LinkButton(label: "↗ nightride.fm", url: "https://nightride.fm")
-                    LinkButton(label: "↗ discord", url: "https://discord.gg/synthwave")
+                    LinkButton(label: "↗ discord", url: "https://discord.com/invite/synthwave")
                 }
                 GridRow {
                     LinkButton(label: "↗ plocic.dev", url: "https://plocic.dev")
