@@ -25,7 +25,7 @@ struct PlayerView: View {
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
-        .frame(width: 300)
+        .frame(width: 340)
         .foregroundStyle(Theme.onSurface)
         // No scoped `.animation(value:)` here — every transition is driven by a
         // single `withAnimation(Theme.transition)` in PlayerStore, so the whole
@@ -239,6 +239,8 @@ private struct ActionChip: View {
         Button(action: action) {
             Text(label)
                 .font(Theme.mono(10, weight: .medium))
+                .lineLimit(1)
+                .fixedSize()        // service labels are short + fixed — never wrap
                 .foregroundStyle(hover ? accent : Theme.onSurfaceVar)
                 .padding(.vertical, 3)
                 .padding(.horizontal, 7)
