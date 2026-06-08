@@ -9,6 +9,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 > the GitHub Release body and Google Play's "What's new".
 
 ## [Unreleased]
+
+## [1.1.0] - 2026-06-08
 ### Added
 - iOS: **CarPlay** support — browse every station and control playback from your
   car's display (Apple-granted `carplay-audio` entitlement).
