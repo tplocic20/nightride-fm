@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+- macOS: Tweak buttons alignment
+
 ## [1.2.0] - 2026-06-10
 
 ### Added

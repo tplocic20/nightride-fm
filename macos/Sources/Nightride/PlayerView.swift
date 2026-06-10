@@ -87,6 +87,7 @@ struct PlayerView: View {
     @ViewBuilder
     private var trackActions: some View {
         if let track = store.nowPlaying, !track.isEmpty {
+            // Four equal-width chips sharing the row (25% each, minus spacing).
             HStack(spacing: 6) {
                 ForEach(MusicService.allCases) { service in
                     ActionChip(label: service.label, accent: accent) {
@@ -98,6 +99,7 @@ struct PlayerView: View {
                     showToast()
                 }
             }
+            .frame(maxWidth: .infinity)
             .padding(.top, 4)
         }
     }
@@ -243,10 +245,9 @@ private struct ActionChip: View {
             Text(label)
                 .font(Theme.mono(10, weight: .medium))
                 .lineLimit(1)
-                .fixedSize()        // service labels are short + fixed — never wrap
                 .foregroundStyle(hover ? accent : Theme.onSurfaceVar)
                 .padding(.vertical, 3)
-                .padding(.horizontal, 7)
+                .frame(maxWidth: .infinity)   // share the row equally with siblings
                 .overlay(
                     Rectangle()
                         .strokeBorder(hover ? accent : Theme.outlineVar, lineWidth: 1)
