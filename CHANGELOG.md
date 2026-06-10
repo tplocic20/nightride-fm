@@ -12,7 +12,11 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ### Added
 
-- HLS support
+- All platforms: **HLS streaming** — adaptive AAC (~96–320 kbps) that adjusts
+  to your connection instead of stuttering. Now the default stream.
+- All platforms: an **hls / mp3 switch** below the playback controls. The
+  classic fixed-bitrate MP3 stream stays available as a fallback for networks
+  that block the HLS port; your choice is remembered across restarts.
 
 ## [1.1.0] - 2026-06-08
 
