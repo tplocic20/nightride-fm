@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-10
+
 ### Added
 
 - All platforms: **HLS streaming** — adaptive AAC (~96–320 kbps) that adjusts
