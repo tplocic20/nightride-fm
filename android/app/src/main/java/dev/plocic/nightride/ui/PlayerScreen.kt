@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -87,6 +88,7 @@ import dev.plocic.nightride.MusicService
 import dev.plocic.nightride.PlayerController
 import dev.plocic.nightride.Station
 import dev.plocic.nightride.Stations
+import dev.plocic.nightride.StreamSource
 import kotlinx.coroutines.delay
 
 @Composable
@@ -157,6 +159,7 @@ fun PlayerScreen(player: PlayerController) {
                         TrackInfo(player)
                         TrackActions(player, accent) { copied = true }
                         TransportControls(player, accent)
+                        SourceToggle(player.source, accent, player::selectSource)
                     }
                 }
             } else if (maxWidth > maxHeight) {
@@ -179,6 +182,7 @@ fun PlayerScreen(player: PlayerController) {
                         TrackInfo(player)
                         TrackActions(player, accent) { copied = true }
                         TransportControls(player, accent)
+                        SourceToggle(player.source, accent, player::selectSource)
                         StationPicker(player, accent)
                     }
                 }
@@ -197,7 +201,15 @@ fun PlayerScreen(player: PlayerController) {
                         TrackInfo(player)
                         TrackActions(player, accent) { copied = true }
                     }
-                    TransportControls(player, accent)
+                    // Transport + source switch travel together so SpaceEvenly
+                    // keeps the portrait rhythm of three blocks.
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                    ) {
+                        TransportControls(player, accent)
+                        SourceToggle(player.source, accent, player::selectSource)
+                    }
                     StationPicker(player, accent)
                 }
             }
@@ -595,6 +607,53 @@ private fun StationTile(station: Station, selected: Boolean, onClick: () -> Unit
             fontFamily = FontFamily.Monospace,
             maxLines = 1,
         )
+    }
+}
+
+/** HLS/MP3 transport switch in the same chrome as the Stations bar: a rounded
+ *  bordered track with an accent pill on the live segment, mirroring the iOS
+ *  SourceToggle. HLS is the adaptive default; MP3 is the fallback for networks
+ *  that block HLS's port 8443. */
+@Composable
+private fun SourceToggle(
+    source: StreamSource,
+    accent: Color,
+    onSelect: (StreamSource) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .width(240.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        StreamSource.values().forEach { s ->
+            val active = s == source
+            val fill by animateColorAsState(
+                targetValue = if (active) accent.copy(alpha = 0.28f) else Color.Transparent,
+                animationSpec = tween(250),
+                label = "sourceFill",
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(fill)
+                    .clickable { onSelect(s) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = s.label,
+                    color = if (active) Color.White else Color.White.copy(alpha = 0.5f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
+        }
     }
 }
 

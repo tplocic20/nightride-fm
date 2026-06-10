@@ -11,6 +11,16 @@ final class PlayerStore: ObservableObject {
     @Published private(set) var isPlaying = false
     @Published private(set) var nowPlaying: TrackMeta?
 
+    /// HLS by default; MP3 as the fallback transport (see StreamSource).
+    /// Flipping it mid-play re-opens the live station on the new source.
+    @Published var source: StreamSource = .saved {
+        didSet {
+            guard source != oldValue else { return }
+            source.save()
+            if let cur = current, isPlaying { play(cur) }
+        }
+    }
+
     private let player = AVPlayer()
     private var startedAt: Date?
     private var meta: MetaStream?
@@ -50,7 +60,7 @@ final class PlayerStore: ObservableObject {
         startedAt = Date()
         nowPlaying = latestMeta[station.id]   // reflect cached track immediately
 
-        let item = AVPlayerItem(url: station.streamURL)
+        let item = AVPlayerItem(url: station.streamURL(for: source))
         player.replaceCurrentItem(with: item)
         player.play()
 

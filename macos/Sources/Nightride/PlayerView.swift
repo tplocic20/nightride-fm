@@ -189,8 +189,11 @@ struct PlayerView: View {
                 }
             }
 
-            // quit on its own line, right-aligned beneath the grid.
+            // Bottom line: the HLS/MP3 transport switch on the left (HLS is the
+            // adaptive default; MP3 is the fallback for networks that block
+            // port 8443), quit on the right.
             HStack {
+                SourceToggle(source: $store.source, accent: accent)
                 Spacer(minLength: 0)
                 FooterButton(label: "quit ▸") {
                     NSApplication.shared.terminate(nil)
@@ -252,6 +255,50 @@ private struct ActionChip: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
+    }
+}
+
+/// Two-segment HLS/MP3 switch in the chip language of the popover: mono text
+/// in a thin-bordered rect, the live segment filled with a faint accent wash.
+private struct SourceToggle: View {
+    @Binding var source: StreamSource
+    var accent: Color = Theme.primary
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(StreamSource.allCases) { s in
+                Segment(label: s.label, isActive: source == s, accent: accent) {
+                    source = s
+                }
+            }
+        }
+        .background(Theme.surface1)
+        .overlay(Rectangle().strokeBorder(Theme.outlineVar, lineWidth: 1))
+        .accessibilityLabel("Stream source")
+        .accessibilityValue(source.label)
+    }
+
+    private struct Segment: View {
+        let label: String
+        let isActive: Bool
+        let accent: Color
+        let action: () -> Void
+
+        @State private var hover = false
+
+        var body: some View {
+            Button(action: action) {
+                Text(label)
+                    .font(Theme.mono(10, weight: .medium))
+                    .foregroundStyle(isActive ? accent : (hover ? Theme.onSurface : Theme.onSurfaceVar))
+                    .padding(.vertical, 3)
+                    .padding(.horizontal, 7)
+                    .background(isActive ? accent.opacity(0.14) : .clear)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { hover = $0 }
+        }
     }
 }
 

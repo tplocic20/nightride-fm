@@ -12,8 +12,11 @@ data class Station(
     val name: String,
     val accentHex: Int,  // per-station neon accent (RGB), mirrors ios/Stations.swift
 ) {
-    /** All stations stream MP3 from the same host. */
-    val streamUrl: String get() = "https://stream.nightride.fm/$id.mp3"
+    /** All stations stream from the same host on both transports. */
+    fun streamUrl(source: StreamSource): String = when (source) {
+        StreamSource.HLS -> "https://stream.nightride.fm:8443/$id/$id.m3u8"
+        StreamSource.MP3 -> "https://stream.nightride.fm/$id.mp3"
+    }
 }
 
 /**
@@ -25,7 +28,7 @@ data class Station(
 fun Station.toMediaItem(context: Context): MediaItem =
     MediaItem.Builder()
         .setMediaId(id)
-        .setUri(streamUrl)
+        .setUri(streamUrl(StreamSource.load(context)))
         .setMediaMetadata(defaultMetadata(context))
         .build()
 
