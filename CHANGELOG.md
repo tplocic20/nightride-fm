@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-06-11
+
 ### Fixed
 
 - macOS: the popover no longer gets clipped top and bottom after a track starts
