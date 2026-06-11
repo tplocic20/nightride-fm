@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-14   # Apple silicon runner
+    runs-on: macos-26   # Apple silicon runner, macOS 26 SDK — match the release workflows
     steps:
       - uses: actions/checkout@v4
 

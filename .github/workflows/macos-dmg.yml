@@ -39,7 +39,11 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-14   # Apple silicon runner
+    runs-on: macos-26   # Apple silicon runner. Must build with the macOS 26 SDK
+                        # (Xcode 26): binaries linked against older SDKs get the
+                        # legacy MenuBarExtra panel on Tahoe — square chrome and
+                        # a fixed height that clips the popover once the
+                        # now-playing content grows after metadata loads.
 
     steps:
       - uses: actions/checkout@v4

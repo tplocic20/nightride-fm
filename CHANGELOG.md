@@ -10,6 +10,13 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Fixed
+
+- macOS: the popover no longer gets clipped top and bottom after a track starts
+  playing. Release builds are now compiled with the macOS 26 SDK (CI moved to
+  `macos-26` runners), which also restores the modern rounded panel chrome on
+  macOS 26.
+
 ## [1.2.1] - 2026-06-10
 
 - macOS: Tweak buttons alignment
