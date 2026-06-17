@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-06-17
+
 ### Fixed
 
 - All platforms: **HLS now starts almost instantly.** The players were
