@@ -10,6 +10,16 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Fixed
+
+- All platforms: **HLS now starts almost instantly.** The players were
+  pre-buffering before emitting any audio, which on a live feed could stall the
+  start for up to a minute even though the stream itself is fine. They now start
+  at the live edge with minimal buffering, the same way the website's web player
+  does. As a safety net, if HLS hasn't started within a few seconds the player
+  falls back to the instant-start MP3 stream instead of waiting out the
+  platform's long internal timeout.
+
 ## [1.2.4] - 2026-06-17
 
 ### Changed

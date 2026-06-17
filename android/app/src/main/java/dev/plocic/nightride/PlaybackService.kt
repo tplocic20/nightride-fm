@@ -10,6 +10,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaConstants
@@ -50,6 +51,20 @@ class PlaybackService : MediaLibraryService() {
         super.onCreate()
 
         player = ExoPlayer.Builder(this)
+            // Start at the live edge with minimal pre-buffering so play is near-
+            // instant, like the website's web player. The defaults make ExoPlayer
+            // accumulate a couple of seconds of audio before it begins; for a live
+            // radio stream we'd rather start now. (min/max buffer kept at default.)
+            .setLoadControl(
+                DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(
+                        DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                        DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+                        /* bufferForPlaybackMs = */ 1000,
+                        /* bufferForPlaybackAfterRebufferMs = */ 2000,
+                    )
+                    .build()
+            )
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)

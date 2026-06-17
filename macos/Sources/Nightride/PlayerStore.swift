@@ -24,6 +24,9 @@ final class PlayerStore: ObservableObject {
     private var startedAt: Date?
     /// Watches the live item's load status so we can fall back HLS→MP3 (see `open`).
     private var itemObserver: NSKeyValueObservation?
+    /// Fires if HLS hasn't started playing within a few seconds, so we fail over
+    /// to MP3 ourselves instead of waiting for AVPlayer's long internal timeout.
+    private var startupWatchdog: Timer?
     private var meta: MetaStream?
     /// Latest known track per station id — kept warm so selecting a station
     /// shows its current track instantly, instead of waiting for the next change.
@@ -31,11 +34,19 @@ final class PlayerStore: ObservableObject {
     private var rateObserver: NSKeyValueObservation?
 
     init() {
+        // Start at the live edge with minimal pre-buffering — the same way the
+        // website's web player does. The default (true) makes AVPlayer fill a
+        // buffer before emitting any audio, which on a live HLS feed can stall
+        // the start for tens of seconds; for live radio we'd rather start now.
+        player.automaticallyWaitsToMinimizeStalling = false
+
         rateObserver = player.observe(\.rate, options: [.new]) { [weak self] _, change in
             let rate = change.newValue ?? 0
             Task { @MainActor [weak self] in
-                withAnimation(Theme.transition) { self?.isPlaying = rate != 0 }
-                self?.refreshNowPlaying()
+                guard let self else { return }
+                withAnimation(Theme.transition) { self.isPlaying = rate != 0 }
+                if rate != 0 { self.startupWatchdog?.invalidate() }  // started → no failover
+                self.refreshNowPlaying()
             }
         }
         // Connect to the metadata feed at launch so every station's current
@@ -46,6 +57,7 @@ final class PlayerStore: ObservableObject {
     deinit {
         rateObserver?.invalidate()
         itemObserver?.invalidate()
+        startupWatchdog?.invalidate()
     }
 
     // MARK: – User intent
@@ -72,16 +84,35 @@ final class PlayerStore: ObservableObject {
     /// safety net. The fallback fires once per open: if MP3 also fails, or the
     /// user has already switched stations, the error just surfaces.
     private func open(_ station: Station, on transport: StreamSource) {
+        startupWatchdog?.invalidate()
         let item = AVPlayerItem(url: station.streamURL(for: transport))
         itemObserver = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             guard item.status == .failed else { return }
-            Task { @MainActor [weak self] in
-                guard let self, transport == .hls, self.current?.id == station.id else { return }
-                self.open(station, on: .mp3)
-            }
+            Task { @MainActor [weak self] in self?.failOver(station, from: transport) }
         }
         player.replaceCurrentItem(with: item)
         player.play()
+
+        // AVPlayer can sit buffering a stalled HLS connection for ~30–60s before
+        // it declares the item .failed — far too long to make the user wait. If
+        // HLS hasn't actually started within a few seconds, fail over to the
+        // instant-start MP3 stream ourselves.
+        if transport == .hls {
+            startupWatchdog = Timer.scheduledTimer(withTimeInterval: 6, repeats: false) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self, self.player.timeControlStatus != .playing else { return }
+                    self.failOver(station, from: .hls)
+                }
+            }
+        }
+    }
+
+    /// Single HLS→MP3 fallback: only if the failed/stalled transport was HLS and
+    /// the user hasn't moved on. If MP3 also fails, the error just surfaces.
+    private func failOver(_ station: Station, from transport: StreamSource) {
+        guard transport == .hls, current?.id == station.id else { return }
+        startupWatchdog?.invalidate()
+        open(station, on: .mp3)
     }
 
     func togglePlayPause() {
@@ -97,6 +128,7 @@ final class PlayerStore: ObservableObject {
     }
 
     func pause() {
+        startupWatchdog?.invalidate()  // a deliberate pause must not trigger failover
         player.pause()
         refreshNowPlaying()
     }
