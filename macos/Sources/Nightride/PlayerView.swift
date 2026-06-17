@@ -201,6 +201,13 @@ struct PlayerView: View {
                     NSApplication.shared.terminate(nil)
                 }
             }
+
+            // Mirrors the iOS / Android clients: make the unofficial, fan-made
+            // status explicit in the UI, not just in the listing / repo.
+            Text("Unofficial fan project — not affiliated with Nightride FM.")
+                .font(Theme.mono(10))
+                .foregroundStyle(Theme.onSurfaceVar.opacity(0.7))
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 2)
     }
