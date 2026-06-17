@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-06-17
+
 ### Changed
 
 - All platforms: **Playback is now MP3-only.** Apple's native HLS handling of the
