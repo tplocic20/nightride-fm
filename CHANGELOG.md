@@ -10,6 +10,11 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Changed
+
+- macOS: show the "Unofficial fan project — not affiliated with Nightride FM."
+  disclaimer in the footer, matching the iOS and Android clients.
+
 ## [1.2.3] - 2026-06-17
 
 ### Fixed
