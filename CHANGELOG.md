@@ -10,6 +10,19 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Fixed
+
+- All platforms: **HLS streaming works again.** nightride.fm moved its HLS
+  endpoint (dropped the `:8443` port and added an `/hls/` path); the apps now
+  point at the new URL. The MP3 stream was unaffected.
+
+### Added
+
+- All platforms: **automatic MP3 failover.** If an HLS stream fails to load, the
+  player now falls back to the MP3 stream for the same station on its own — so a
+  future HLS endpoint change degrades to MP3 instead of going silent. Your
+  saved hls / mp3 preference is left untouched.
+
 ## [1.2.2] - 2026-06-11
 
 ### Fixed

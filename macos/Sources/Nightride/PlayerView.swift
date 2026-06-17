@@ -192,8 +192,8 @@ struct PlayerView: View {
             }
 
             // Bottom line: the HLS/MP3 transport switch on the left (HLS is the
-            // adaptive default; MP3 is the fallback for networks that block
-            // port 8443), quit on the right.
+            // adaptive default; MP3 is the fallback for clients or networks
+            // that can't handle HLS), quit on the right.
             HStack {
                 SourceToggle(source: $store.source, accent: accent)
                 Spacer(minLength: 0)

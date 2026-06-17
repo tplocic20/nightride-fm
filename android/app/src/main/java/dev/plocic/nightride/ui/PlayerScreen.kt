@@ -612,8 +612,8 @@ private fun StationTile(station: Station, selected: Boolean, onClick: () -> Unit
 
 /** HLS/MP3 transport switch in the same chrome as the Stations bar: a rounded
  *  bordered track with an accent pill on the live segment, mirroring the iOS
- *  SourceToggle. HLS is the adaptive default; MP3 is the fallback for networks
- *  that block HLS's port 8443. */
+ *  SourceToggle. HLS is the adaptive default; MP3 is the fallback for clients
+ *  or networks that can't handle HLS. */
 @Composable
 private fun SourceToggle(
     source: StreamSource,

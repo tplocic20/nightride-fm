@@ -5,8 +5,10 @@ import android.content.Context
 /**
  * Which of nightride.fm's two transports to pull audio over. HLS (adaptive
  * AAC, ~96–320k variants) rides quality drops gracefully and is the default;
- * the fixed-bitrate MP3 stream stays as the fallback for networks that block
- * HLS's non-standard port (8443) — MP3 is on plain 443.
+ * the fixed-bitrate MP3 stream stays as the fallback for clients or networks
+ * that can't handle HLS, and is the automatic failover target when an HLS
+ * stream fails to load (see PlaybackService.recoverFromHlsFailure). Both ride
+ * plain 443.
  *
  * Persisted in SharedPreferences so the choice survives restarts and is
  * readable from both the UI process and [PlaybackService] (same process),

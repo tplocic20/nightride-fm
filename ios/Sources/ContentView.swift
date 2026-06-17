@@ -294,8 +294,8 @@ struct ContentView: View {
 
 /// HLS/MP3 transport switch in the same chrome as the Stations bar: a rounded
 /// bordered track with an accent pill that slides to the live segment. HLS is
-/// the adaptive default; MP3 is the fallback for networks that block HLS's
-/// port 8443.
+/// the adaptive default; MP3 is the fallback for clients or networks that
+/// can't handle HLS.
 private struct SourceToggle: View {
     @Binding var source: StreamSource
     var accent: Color = Color(hex: 0xCC55FF)

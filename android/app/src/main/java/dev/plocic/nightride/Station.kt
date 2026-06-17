@@ -14,7 +14,7 @@ data class Station(
 ) {
     /** All stations stream from the same host on both transports. */
     fun streamUrl(source: StreamSource): String = when (source) {
-        StreamSource.HLS -> "https://stream.nightride.fm:8443/$id/$id.m3u8"
+        StreamSource.HLS -> "https://stream.nightride.fm/hls/$id/$id.m3u8"
         StreamSource.MP3 -> "https://stream.nightride.fm/$id.mp3"
     }
 }
@@ -25,10 +25,13 @@ data class Station(
  * is the stream key so we can always resolve a request back to its [Station];
  * the per-station cover rides along so the notification and Auto show art.
  */
-fun Station.toMediaItem(context: Context): MediaItem =
+fun Station.toMediaItem(
+    context: Context,
+    source: StreamSource = StreamSource.load(context),
+): MediaItem =
     MediaItem.Builder()
         .setMediaId(id)
-        .setUri(streamUrl(StreamSource.load(context)))
+        .setUri(streamUrl(source))
         .setMediaMetadata(defaultMetadata(context))
         .build()
 

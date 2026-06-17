@@ -22,6 +22,8 @@ final class PlayerStore: ObservableObject {
 
     private let player = AVPlayer()
     private var startedAt: Date?
+    /// Watches the live item's load status so we can fall back HLS→MP3 (see `open`).
+    private var itemObserver: NSKeyValueObservation?
     private var meta: MetaStream?
     /// Latest known track per station id — kept warm so selecting a station
     /// shows its current track instantly, instead of waiting for the next change.
@@ -41,7 +43,10 @@ final class PlayerStore: ObservableObject {
         startMeta()
     }
 
-    deinit { rateObserver?.invalidate() }
+    deinit {
+        rateObserver?.invalidate()
+        itemObserver?.invalidate()
+    }
 
     // MARK: – User intent
 
@@ -57,11 +62,26 @@ final class PlayerStore: ObservableObject {
         }
         startedAt = Date()
 
-        let item = AVPlayerItem(url: station.streamURL(for: source))
+        open(station, on: source)
+        refreshNowPlaying()
+    }
+
+    /// Open a station on a specific transport, watching the new item for a load
+    /// failure so we can fall back HLS→MP3 automatically — nightride.fm has moved
+    /// the HLS path before, and the fixed-bitrate MP3 endpoint is the stable
+    /// safety net. The fallback fires once per open: if MP3 also fails, or the
+    /// user has already switched stations, the error just surfaces.
+    private func open(_ station: Station, on transport: StreamSource) {
+        let item = AVPlayerItem(url: station.streamURL(for: transport))
+        itemObserver = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+            guard item.status == .failed else { return }
+            Task { @MainActor [weak self] in
+                guard let self, transport == .hls, self.current?.id == station.id else { return }
+                self.open(station, on: .mp3)
+            }
+        }
         player.replaceCurrentItem(with: item)
         player.play()
-
-        refreshNowPlaying()
     }
 
     func togglePlayPause() {
