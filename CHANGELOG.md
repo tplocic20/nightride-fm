@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-06-17
+
 ### Changed
 
 - macOS: show the "Unofficial fan project — not affiliated with Nightride FM."
