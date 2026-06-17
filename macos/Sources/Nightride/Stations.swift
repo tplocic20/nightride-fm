@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Which of nightride.fm's two transports to pull audio over. HLS (adaptive
-/// AAC, ~96–320k variants) rides quality drops gracefully and is the default;
-/// the fixed-bitrate MP3 stream stays as the fallback for clients or networks
-/// that can't handle HLS, and is the automatic failover target when an HLS
-/// stream fails to load (see PlayerStore.open). Both ride plain 443.
+/// Which of nightride.fm's two transports to pull audio over. Both ride plain
+/// 443. NOTE: HLS is currently disabled at runtime — `PlayerStore.source` is
+/// pinned to `.mp3` and there's no picker, because Apple's native HLS handling
+/// of the live feed proved unstable while the fixed-bitrate MP3 stream is solid
+/// (incl. in-car). The HLS case, `streamURL(for:)`'s HLS branch, the HLS→MP3
+/// failover in `PlayerStore.open`, and the `saved`/`save()` pref below are all
+/// kept intact but unreachable, ready to re-enable.
 enum StreamSource: String, CaseIterable, Identifiable {
     case hls, mp3
 

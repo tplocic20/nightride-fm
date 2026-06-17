@@ -29,7 +29,6 @@ struct ContentView: View {
                             trackInfo
                             trackActions
                             transportControls
-                            sourceToggle
                         }
                         .padding(28)
                         .frame(width: 420)
@@ -50,7 +49,6 @@ struct ContentView: View {
                             trackInfo
                             trackActions
                             transportControls
-                            sourceToggle
                             stationPicker
                         }
                         .frame(maxWidth: .infinity)
@@ -68,7 +66,6 @@ struct ContentView: View {
                         }
                         Spacer()
                         transportControls
-                        sourceToggle
                         Spacer()
                         stationPicker
                             .padding(.bottom, 24)
@@ -256,12 +253,6 @@ struct ContentView: View {
         }
     }
 
-    /// The HLS/MP3 switch, sized as a compact bar under the transport controls.
-    private var sourceToggle: some View {
-        SourceToggle(source: $store.source, accent: accent)
-            .frame(maxWidth: 240)
-    }
-
     private var stationPicker: some View {
         Menu {
             ForEach(Stations.all) { st in
@@ -289,50 +280,6 @@ struct ContentView: View {
                     .strokeBorder(accent.opacity(0.4), lineWidth: 1)
             )
         }
-    }
-}
-
-/// HLS/MP3 transport switch in the same chrome as the Stations bar: a rounded
-/// bordered track with an accent pill that slides to the live segment. HLS is
-/// the adaptive default; MP3 is the fallback for clients or networks that
-/// can't handle HLS.
-private struct SourceToggle: View {
-    @Binding var source: StreamSource
-    var accent: Color = Color(hex: 0xCC55FF)
-
-    @Namespace private var ns
-
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(StreamSource.allCases) { s in
-                let isActive = source == s
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) { source = s }
-                } label: {
-                    Text(s.label)
-                        .font(.system(size: 14, weight: .medium, design: .monospaced))
-                        .foregroundStyle(isActive ? .white : .white.opacity(0.5))
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                        .background {
-                            if isActive {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(accent.opacity(0.28))
-                                    .matchedGeometryEffect(id: "selection", in: ns)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(4)
-        .background(.white.opacity(0.08), in: .rect(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(accent.opacity(0.4), lineWidth: 1)
-        )
-        .accessibilityLabel("Stream source")
-        .accessibilityValue(source.label)
     }
 }
 

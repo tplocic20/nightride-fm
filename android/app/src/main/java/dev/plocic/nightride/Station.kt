@@ -25,9 +25,15 @@ data class Station(
  * is the stream key so we can always resolve a request back to its [Station];
  * the per-station cover rides along so the notification and Auto show art.
  */
+// HLS is intentionally disabled at runtime for now (native/Apple HLS proved
+// unstable on some clients/networks; the fixed-bitrate MP3 stream is solid,
+// incl. in-car). MP3 is the only transport callers get, the picker UI is gone,
+// and we ignore any StreamSource saved in SharedPreferences. The HLS code path
+// (StreamSource.HLS, Station.streamUrl's HLS branch, the HLS→MP3 failover in
+// PlaybackService) is kept intact but unreachable for an easy future re-enable.
 fun Station.toMediaItem(
     context: Context,
-    source: StreamSource = StreamSource.load(context),
+    source: StreamSource = StreamSource.MP3,
 ): MediaItem =
     MediaItem.Builder()
         .setMediaId(id)

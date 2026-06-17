@@ -24,8 +24,6 @@ class PlayerController(private val context: Context) {
         private set
     var nowPlaying by mutableStateOf("")  // raw "Artist - Title", may be empty
         private set
-    var source by mutableStateOf(StreamSource.load(context))
-        private set
 
     private var controller: MediaController? = null
 
@@ -64,14 +62,6 @@ class PlayerController(private val context: Context) {
         c.setMediaItem(station.toMediaItem(context))
         c.prepare()
         c.play()
-    }
-
-    /** Switch HLS ↔ MP3; if something is live, re-open it on the new transport. */
-    fun selectSource(newSource: StreamSource) {
-        if (newSource == source) return
-        source = newSource
-        StreamSource.save(context, newSource)
-        if (isPlaying) current?.let { play(it) }
     }
 
     fun togglePlayPause() {

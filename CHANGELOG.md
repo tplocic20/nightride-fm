@@ -10,6 +10,16 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Changed
+
+- All platforms: **Playback is now MP3-only.** Apple's native HLS handling of the
+  live feed proved unstable (stalls with no recovery), so the apps now stream the
+  fixed-bitrate MP3 endpoint exclusively, which is rock-solid in practice
+  (including in-car). The HLS/MP3 transport picker is removed and the player
+  reverts to its simpler pre-1.2.4 behaviour — the HLS-startup tuning added in
+  1.2.4/1.2.5 is no longer needed and has been dropped. The HLS code path is kept
+  in the codebase, dormant, ready to re-enable if native HLS support improves.
+
 ## [1.2.5] - 2026-06-17
 
 ### Fixed
