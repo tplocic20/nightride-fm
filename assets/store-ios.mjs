@@ -24,7 +24,7 @@ import { homedir } from 'node:os';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SHOTS = process.argv[2] ?? join(homedir(), 'Documents', 'night-fm', 'iOS');
-const OUT = join(SHOTS, 'store');
+const OUT = join(SHOTS, process.env.OUTDIR ?? 'store');
 
 function loadFont(path) {
   const buf = readFileSync(path);
@@ -35,10 +35,12 @@ const ARIAL = loadFont('/System/Library/Fonts/Supplemental/Arial.ttf');
 
 const FLAT_BG = '#0B0710';
 
-const IPHONE = (n) => `Simulator Screenshot - iPhone 17e - 2026-06-10 at 14.40.${n}.png`;
-const IPAD = (n) => `Simulator Screenshot - iPad Pro 11-inch (M5) - 2026-06-10 at 14.40.${n}.png`;
+// v1.3.0 (MP3-only): re-shot on iPhone 17 Pro Max / iPad Pro 13". The HLS/MP3
+// slide 4 is gone (feature removed); accents follow the station in each shot
+// (Nightride purple, Chillsynth peach, Darksynth pink — see Stations.swift).
+const IPHONE = (t) => `Simulator Screenshot - iPhone 17 Pro Max - 2026-06-18 at ${t}.png`;
+const IPAD = (t) => `Simulator Screenshot - iPad Pro 13-inch (M5) - 2026-06-18 at ${t}.png`;
 
-// Copy mirrors the v1.0 set; slide 4 is new for the HLS/MP3 source switch.
 const COPY = {
   anywhere: {
     accent: '#CC55FF',
@@ -46,19 +48,14 @@ const COPY = {
     body: 'Live now-playing, on every station.',
   },
   stations: {
-    accent: '#CC55FF',
+    accent: '#FFCBA6',
     headline: ['EVERY STATION,', 'ONE TAP AWAY'],
     body: 'Nine stations, always one tap away.',
   },
   track: {
-    accent: '#FF4D4D',
+    accent: '#FD3D9D',
     headline: ['FOUND A TRACK', 'YOU LOVE?'],
     body: 'Spotify, Apple Music, or YouTube.',
-  },
-  hls: {
-    accent: '#FF4D9D',
-    headline: ['ADAPTIVE HLS,', 'CLASSIC MP3'],
-    body: 'Adaptive HLS — or classic MP3. One tap.',
   },
 };
 
@@ -71,10 +68,9 @@ const DEVICES = [
     deviceBox: { top: 833, bottom: 2600, maxW: 880 },
     bezel: 22, screenRadius: 84,
     slides: [
-      { out: 'ios-iphone-1', shot: IPHONE('22'), ...COPY.anywhere },
-      { out: 'ios-iphone-2', shot: IPHONE('25'), ...COPY.stations },
-      { out: 'ios-iphone-3', shot: IPHONE('28'), ...COPY.track },
-      { out: 'ios-iphone-4', shot: IPHONE('19'), ...COPY.hls },
+      { out: 'ios-iphone-1', shot: IPHONE('06.34.07'), ...COPY.anywhere },
+      { out: 'ios-iphone-2', shot: IPHONE('06.42.08'), ...COPY.stations },
+      { out: 'ios-iphone-3', shot: IPHONE('06.42.11'), ...COPY.track },
     ],
   },
   {
@@ -84,10 +80,9 @@ const DEVICES = [
     deviceBox: { top: 830, bottom: 2580, maxW: 1380 },
     bezel: 26, screenRadius: 64,
     slides: [
-      { out: 'ios-ipad-1', shot: IPAD('37'), ...COPY.anywhere },
-      { out: 'ios-ipad-2', shot: IPAD('32'), ...COPY.stations },
-      { out: 'ios-ipad-3', shot: IPAD('39'), accent: '#FFCBA6', headline: COPY.track.headline, body: COPY.track.body },
-      { out: 'ios-ipad-4', shot: IPAD('32'), ...COPY.hls },
+      { out: 'ios-ipad-1', shot: IPAD('06.41.35'), ...COPY.anywhere },
+      { out: 'ios-ipad-2', shot: IPAD('06.41.38'), ...COPY.stations },
+      { out: 'ios-ipad-3', shot: IPAD('06.41.45'), ...COPY.track },
     ],
   },
 ];
@@ -172,4 +167,4 @@ for (const dev of DEVICES) {
   }
 }
 rmSync(tmp);
-console.log(`\n8 slides → ${OUT}`);
+console.log(`\n${DEVICES.reduce((n, d) => n + d.slides.length, 0)} slides → ${OUT}`);

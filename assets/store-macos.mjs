@@ -21,7 +21,7 @@ import { homedir } from 'node:os';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SHOTS = process.argv[2] ?? join(homedir(), 'Documents', 'night-fm', 'macOS');
-const OUT = join(SHOTS, 'store');
+const OUT = join(SHOTS, process.env.OUTDIR ?? 'store');
 
 function loadFont(path) {
   const buf = readFileSync(path);
@@ -34,35 +34,29 @@ const W = 2880, H = 1800;
 const FLAT_BG = '#0B0710';
 
 // One entry per store slide. Accents follow the station shown in the shot
-// (same values as generate.mjs); the last slide uses the app's idle magenta.
+// (see Stations.swift). v1.3.0 (MP3-only): re-shot popovers, and the HLS/MP3
+// slide 4 is gone (feature removed). Slide 3 now shows Darksynth (pink).
 const SLIDES = [
   {
     out: 'macos-1',
-    shot: 'SCR-20260610-mzsu.png',
+    shot: 'SCR-20260618-gojf.png',
     accent: '#CC55FF',
     headline: ['LIVE SYNTHWAVE', 'IN YOUR MENU BAR'],
     body: ['Every Nightride FM station, always', 'one click away in the menu bar.'],
   },
   {
     out: 'macos-2',
-    shot: 'SCR-20260610-mztd.png',
+    shot: 'SCR-20260618-gojn.png',
     accent: '#FFCBA6',
     headline: ['NOW PLAYING,', 'ALWAYS IN VIEW'],
     body: ['The current track and artist,', 'updating live as the station plays.'],
   },
   {
     out: 'macos-3',
-    shot: 'SCR-20260610-mztp.png',
-    accent: '#FF4D4D',
+    shot: 'SCR-20260618-gojy.png',
+    accent: '#FD3D9D',
     headline: ['FOUND A TRACK', 'YOU LOVE?'],
     body: ['Open it on Spotify, Apple Music or', 'YouTube — or copy artist and title.'],
-  },
-  {
-    out: 'macos-4',
-    shot: 'SCR-20260610-mzsl.png',
-    accent: '#FF4D9D',
-    headline: ['ADAPTIVE HLS,', 'CLASSIC MP3'],
-    body: ['Adaptive HLS streaming by default —', 'flip to the classic MP3 stream anytime.'],
   },
 ];
 
