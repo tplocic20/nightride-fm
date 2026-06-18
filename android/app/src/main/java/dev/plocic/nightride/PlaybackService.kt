@@ -8,9 +8,11 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.extractor.metadata.icy.IcyInfo
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaConstants
 import androidx.media3.session.MediaLibraryService
@@ -45,9 +47,6 @@ class PlaybackService : MediaLibraryService() {
     private val scope = CoroutineScope(SupervisorJob())
     private val main = Handler(Looper.getMainLooper())
     private var latestMeta: Map<String, String> = emptyMap()
-    /// The pending delayed metadata swap (see [scheduleMetaSwap]); cancelled and
-    /// replaced whenever the track changes again or the station switches.
-    private var pendingMetaSwap: Runnable? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -66,12 +65,11 @@ class PlaybackService : MediaLibraryService() {
 
         player.addListener(object : Player.Listener {
             override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
-                // A station switch shows its cached track immediately — drop any
-                // swap staged for the station we just left.
-                pendingMetaSwap?.let(main::removeCallbacks)
-                pendingMetaSwap = null
+                // A station switch shows its cached (live-edge) track immediately;
+                // the in-band ICY title then corrects it to the buffered audio.
                 applyMeta()
             }
+            override fun onMetadata(metadata: Metadata) = applyIcyMetadata(metadata)
             override fun onPlayerError(error: PlaybackException) = recoverFromHlsFailure()
         })
 
@@ -82,11 +80,12 @@ class PlaybackService : MediaLibraryService() {
         val client = OkHttpClient.Builder()
             .readTimeout(0, TimeUnit.MILLISECONDS)
             .build()
+        // The /meta feed is the live edge (instant), so it only warms the cache
+        // that feeds the Android Auto browse tree and the instant track shown on a
+        // station switch. The playing station's live line comes from the audio's
+        // in-band ICY metadata (see onMetadata / applyIcyMetadata), not from here.
         meta = MetaStream(client, scope) { updates ->
-            main.post {
-                latestMeta = latestMeta + updates
-                scheduleMetaSwap(updates)
-            }
+            main.post { latestMeta = latestMeta + updates }
         }
         meta.start()
     }
@@ -103,7 +102,6 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         meta.stop()
-        pendingMetaSwap?.let(main::removeCallbacks)
         scope.cancel()
         session?.run {
             player.release()
@@ -131,42 +129,33 @@ class PlaybackService : MediaLibraryService() {
     }
 
     /**
-     * Hold a track change for [META_SYNC_DELAY_MS] before stamping it onto the
-     * playing item, so the notification / Auto / phone UI line up with the
-     * buffered audio the listener actually hears. The `/meta` feed is pushed from
-     * the encoder's live edge, but the MP3 listener sits a roughly constant
-     * distance behind it (Icecast burst-on-connect + ExoPlayer prebuffer), so a
-     * fixed offset re-syncs the two. `latestMeta` is already updated, so the Auto
-     * browse tree stays live; only the playing item's swap is deferred. While
-     * paused (no audio advancing) the swap is immediate. Each call supersedes the
-     * previous one, re-arming with the newer track.
+     * Drive the playing station's live line from the MP3 stream's in-band ICY
+     * `StreamTitle`. ExoPlayer emits it through [Player.Listener.onMetadata] as it
+     * renders the stream, so it lands in step with the buffered audio the listener
+     * actually hears — no fixed offset to guess at. Icecast re-sends the same title
+     * roughly every metadata interval; [applyMeta]'s equality guard absorbs the
+     * repeats.
      */
-    private fun scheduleMetaSwap(updates: Map<String, String>) {
-        val station = player.currentMediaItem?.mediaId?.let(Stations::byId) ?: return
-        if (station.id !in updates) return  // change doesn't touch the live station
-        pendingMetaSwap?.let(main::removeCallbacks)
-        if (!player.isPlaying) {
-            pendingMetaSwap = null
-            applyMeta()
-            return
+    private fun applyIcyMetadata(metadata: Metadata) {
+        for (i in 0 until metadata.length()) {
+            val entry = metadata.get(i)
+            if (entry is IcyInfo) {
+                entry.title?.takeIf { it.isNotBlank() }?.let { applyMeta(it) }
+            }
         }
-        val swap = Runnable {
-            pendingMetaSwap = null
-            applyMeta()
-        }
-        pendingMetaSwap = swap
-        main.postDelayed(swap, META_SYNC_DELAY_MS)
     }
 
     /**
-     * Re-stamp the currently playing item with the freshest "Artist - Title"
-     * for its station. [Player.replaceMediaItem] with the same URI updates the
-     * metadata in place without restarting the stream.
+     * Re-stamp the currently playing item with the freshest "Artist - Title" for
+     * its station. [rawOverride] carries the audio-synced ICY title; without it we
+     * fall back to the cached `/meta` value (used on a station switch).
+     * [Player.replaceMediaItem] with the same URI updates the metadata in place
+     * without restarting the stream.
      */
-    private fun applyMeta() {
+    private fun applyMeta(rawOverride: String? = null) {
         val item = player.currentMediaItem ?: return
         val station = Stations.byId(item.mediaId) ?: return
-        val raw = latestMeta[station.id].orEmpty()
+        val raw = rawOverride ?: latestMeta[station.id].orEmpty()
         val split = Titles.split(raw, station)
 
         val metadata = MediaMetadata.Builder()
@@ -301,8 +290,5 @@ class PlaybackService : MediaLibraryService() {
     private companion object {
         const val ROOT_ID = "root"
         val REKT_IDS = setOf("rekt", "rektory")
-        /** Delay applied to a live track change so the UI matches buffered audio;
-         *  see [scheduleMetaSwap]. Tune by ear if it drifts. */
-        const val META_SYNC_DELAY_MS = 12_000L
     }
 }

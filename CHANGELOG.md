@@ -10,6 +10,18 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Fixed
+
+- All platforms: **The track name now stays in sync with the music on its own.**
+  1.3.1 held each title change by a fixed ~12s to line up with the buffered
+  audio, but the real lag varies per connection (Icecast burst-on-connect +
+  client prebuffer), so a single offset drifted — sometimes early, sometimes
+  late. The playing station's title now comes from the stream's own in-band ICY
+  metadata, which rides the same buffer as the audio, so it flips exactly when
+  the song changes in your ears — no offset to tune. The `/meta` feed still
+  drives the station list / CarPlay / Android Auto browse (where the instant,
+  live-edge value is what you want).
+
 ## [1.3.1] - 2026-06-18
 
 ### Fixed
