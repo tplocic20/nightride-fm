@@ -20,8 +20,19 @@ final class PlayerStore: ObservableObject {
     /// to re-enable HLS.
     let source: StreamSource = .mp3
 
+    /// How long to hold a metadata change before showing it, so the displayed
+    /// track lines up with what the listener actually hears. The `/meta` feed is
+    /// pushed from the encoder's live edge, but the MP3 listener sits a roughly
+    /// constant distance behind it (Icecast burst-on-connect + client prebuffer),
+    /// so a fixed offset re-syncs the two. Tune by ear if it drifts.
+    static let metaSyncDelay: TimeInterval = 12
+
     private let player = AVPlayer()
     private var startedAt: Date?
+    /// The pending delayed now-playing swap (see `scheduleNowPlayingSwap`),
+    /// cancelled and replaced whenever the track changes again, the station
+    /// switches, or playback pauses.
+    private var metaSwapTask: Task<Void, Never>?
     /// Watches the live item's load status so we can fall back HLS→MP3 (see `open`).
     private var itemObserver: NSKeyValueObservation?
     private var meta: MetaStream?
@@ -60,6 +71,7 @@ final class PlayerStore: ObservableObject {
     // MARK: – User intent
 
     func play(_ station: Station) {
+        metaSwapTask?.cancel()                // drop any swap staged for the old station
         current = station
         startedAt = Date()
         nowPlaying = latestMeta[station.id]   // reflect cached track immediately
@@ -98,6 +110,9 @@ final class PlayerStore: ObservableObject {
     }
 
     func pause() {
+        // Audio is frozen, so a pending swap would show a track the listener
+        // hasn't reached — drop it; live updates resume instantly while paused.
+        metaSwapTask?.cancel()
         player.pause()
         refreshNowPlaying()
     }
@@ -141,8 +156,26 @@ final class PlayerStore: ObservableObject {
         latestMeta.merge(updates) { _, new in new }
         // Only refresh the UI / widgets when the change touches the live station.
         guard let cur = current, let track = updates[cur.id] else { return }
-        nowPlaying = track
-        refreshNowPlaying()
+        scheduleNowPlayingSwap(to: track)
+    }
+
+    /// Show `track` after `metaSyncDelay` so the displayed song lines up with the
+    /// buffered audio the listener is actually hearing. While paused (no audio
+    /// advancing) the swap is immediate. Each call supersedes the previous one,
+    /// so a second change inside the window simply re-arms with the newer track.
+    private func scheduleNowPlayingSwap(to track: TrackMeta) {
+        metaSwapTask?.cancel()
+        guard isPlaying else {
+            nowPlaying = track
+            refreshNowPlaying()
+            return
+        }
+        metaSwapTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(Self.metaSyncDelay * 1_000_000_000))
+            guard !Task.isCancelled, let self else { return }
+            self.nowPlaying = track
+            self.refreshNowPlaying()
+        }
     }
 
     // MARK: – Now Playing widget (Lock Screen + Control Center + CarPlay)

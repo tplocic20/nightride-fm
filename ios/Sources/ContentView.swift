@@ -190,6 +190,10 @@ struct ContentView: View {
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .lineLimit(2, reservesSpace: true)
+                // Cross-dissolve the line as the track flips — smooths the swap
+                // that PlayerStore deliberately delays to match the audio buffer.
+                .contentTransition(.opacity)
+                .animation(.easeInOut(duration: 0.4), value: store.nowPlaying)
         }
     }
 

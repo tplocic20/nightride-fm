@@ -45,6 +45,9 @@ class PlaybackService : MediaLibraryService() {
     private val scope = CoroutineScope(SupervisorJob())
     private val main = Handler(Looper.getMainLooper())
     private var latestMeta: Map<String, String> = emptyMap()
+    /// The pending delayed metadata swap (see [scheduleMetaSwap]); cancelled and
+    /// replaced whenever the track changes again or the station switches.
+    private var pendingMetaSwap: Runnable? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -62,7 +65,13 @@ class PlaybackService : MediaLibraryService() {
             .build()
 
         player.addListener(object : Player.Listener {
-            override fun onMediaItemTransition(item: MediaItem?, reason: Int) = applyMeta()
+            override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
+                // A station switch shows its cached track immediately — drop any
+                // swap staged for the station we just left.
+                pendingMetaSwap?.let(main::removeCallbacks)
+                pendingMetaSwap = null
+                applyMeta()
+            }
             override fun onPlayerError(error: PlaybackException) = recoverFromHlsFailure()
         })
 
@@ -76,7 +85,7 @@ class PlaybackService : MediaLibraryService() {
         meta = MetaStream(client, scope) { updates ->
             main.post {
                 latestMeta = latestMeta + updates
-                applyMeta()
+                scheduleMetaSwap(updates)
             }
         }
         meta.start()
@@ -94,6 +103,7 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         meta.stop()
+        pendingMetaSwap?.let(main::removeCallbacks)
         scope.cancel()
         session?.run {
             player.release()
@@ -118,6 +128,34 @@ class PlaybackService : MediaLibraryService() {
         player.setMediaItem(station.toMediaItem(this, StreamSource.MP3))
         player.prepare()
         player.play()
+    }
+
+    /**
+     * Hold a track change for [META_SYNC_DELAY_MS] before stamping it onto the
+     * playing item, so the notification / Auto / phone UI line up with the
+     * buffered audio the listener actually hears. The `/meta` feed is pushed from
+     * the encoder's live edge, but the MP3 listener sits a roughly constant
+     * distance behind it (Icecast burst-on-connect + ExoPlayer prebuffer), so a
+     * fixed offset re-syncs the two. `latestMeta` is already updated, so the Auto
+     * browse tree stays live; only the playing item's swap is deferred. While
+     * paused (no audio advancing) the swap is immediate. Each call supersedes the
+     * previous one, re-arming with the newer track.
+     */
+    private fun scheduleMetaSwap(updates: Map<String, String>) {
+        val station = player.currentMediaItem?.mediaId?.let(Stations::byId) ?: return
+        if (station.id !in updates) return  // change doesn't touch the live station
+        pendingMetaSwap?.let(main::removeCallbacks)
+        if (!player.isPlaying) {
+            pendingMetaSwap = null
+            applyMeta()
+            return
+        }
+        val swap = Runnable {
+            pendingMetaSwap = null
+            applyMeta()
+        }
+        pendingMetaSwap = swap
+        main.postDelayed(swap, META_SYNC_DELAY_MS)
     }
 
     /**
@@ -263,5 +301,8 @@ class PlaybackService : MediaLibraryService() {
     private companion object {
         const val ROOT_ID = "root"
         val REKT_IDS = setOf("rekt", "rektory")
+        /** Delay applied to a live track change so the UI matches buffered audio;
+         *  see [scheduleMetaSwap]. Tune by ear if it drifts. */
+        const val META_SYNC_DELAY_MS = 12_000L
     }
 }

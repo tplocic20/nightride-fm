@@ -2,9 +2,13 @@ package dev.plocic.nightride.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -332,16 +336,23 @@ private fun TrackInfo(player: PlayerController) {
             textAlign = TextAlign.Center,
         )
         // Reserve both lines so a wrapping title doesn't nudge the layout as
-        // tracks change.
-        Text(
-            text = player.nowPlaying.ifEmpty { BRAND },
-            color = Color.White.copy(alpha = 0.7f),
-            fontSize = 15.sp,
-            textAlign = TextAlign.Center,
-            minLines = 2,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        // tracks change. Cross-dissolve the line as the track flips — smooths the
+        // swap that PlaybackService deliberately delays to match the audio buffer.
+        AnimatedContent(
+            targetState = player.nowPlaying.ifEmpty { BRAND },
+            transitionSpec = { fadeIn(tween(400)) togetherWith fadeOut(tween(400)) },
+            label = "nowPlaying",
+        ) { text ->
+            Text(
+                text = text,
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 15.sp,
+                textAlign = TextAlign.Center,
+                minLines = 2,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
