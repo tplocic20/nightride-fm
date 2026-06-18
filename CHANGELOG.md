@@ -10,6 +10,15 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Fixed
+
+- All platforms: **The track name now changes in time with the music.** The
+  metadata feed is pushed the instant a song changes at the source, but the
+  audio you hear lags ~12s behind it (stream buffering), so the title used to
+  flip well before the new song actually started. The displayed track is now
+  held back to line up with what's playing. As a finishing touch, the line
+  cross-fades as it changes instead of cutting abruptly.
+
 ## [1.3.0] - 2026-06-17
 
 ### Changed
