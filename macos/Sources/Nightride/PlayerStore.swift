@@ -152,14 +152,14 @@ final class PlayerStore: ObservableObject {
     private func scheduleNowPlayingSwap(to track: TrackMeta) {
         metaSwapTask?.cancel()
         guard isPlaying else {
-            withAnimation(Theme.transition) { nowPlaying = track }
+            nowPlaying = track          // macOS: plain swap, no transition
             refreshNowPlaying()
             return
         }
         metaSwapTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(Self.metaSyncDelay * 1_000_000_000))
             guard !Task.isCancelled, let self else { return }
-            withAnimation(Theme.transition) { self.nowPlaying = track }
+            self.nowPlaying = track
             self.refreshNowPlaying()
         }
     }
