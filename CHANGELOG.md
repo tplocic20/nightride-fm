@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-06-18
+
 ### Fixed
 
 - All platforms: **The track name now changes in time with the music.** The
