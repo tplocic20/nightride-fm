@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-06-19
+
 ### Changed
 
 - All platforms: **The now-playing "Artist — Title" line is now larger and
