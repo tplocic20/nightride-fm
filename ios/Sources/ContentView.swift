@@ -186,8 +186,8 @@ struct ContentView: View {
             // Reserve both lines so a wrapping title doesn't nudge the layout as
             // tracks change.
             Text(store.nowPlaying?.display.isEmpty == false ? store.nowPlaying!.display : "Nightride FM")
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.7))
+                .font(.body.weight(.medium))
+                .foregroundStyle(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
                 .lineLimit(2, reservesSpace: true)
         }

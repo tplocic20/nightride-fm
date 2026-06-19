@@ -109,13 +109,13 @@ struct PlayerView: View {
         let track = store.nowPlaying
         if let track, !track.isEmpty {
             Text(track.title.isEmpty ? track.artist : track.title)
-                .font(Theme.mono(12))
+                .font(Theme.mono(14))
                 .foregroundStyle(Theme.onSurface)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
             if !track.artist.isEmpty {
                 Text(track.artist)
-                    .font(Theme.mono(11))
+                    .font(Theme.mono(13))
                     .foregroundStyle(accent)
                     .lineLimit(1)
             }

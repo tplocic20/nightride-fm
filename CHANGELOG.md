@@ -10,6 +10,14 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Changed
+
+- All platforms: **The now-playing "Artist — Title" line is now larger and
+  easier to read at a glance.** Community feedback was that the track label sat
+  too small to comfortably see who's playing, so it's been bumped up across iOS,
+  Android, and macOS (with a slight contrast lift on mobile). The reserved
+  two-line layout is unchanged, so nothing shifts as tracks change.
+
 ## [1.3.2] - 2026-06-18
 
 ### Fixed

@@ -335,8 +335,9 @@ private fun TrackInfo(player: PlayerController) {
         // tracks change.
         Text(
             text = player.nowPlaying.ifEmpty { BRAND },
-            color = Color.White.copy(alpha = 0.7f),
-            fontSize = 15.sp,
+            color = Color.White.copy(alpha = 0.8f),
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
             minLines = 2,
             maxLines = 2,
