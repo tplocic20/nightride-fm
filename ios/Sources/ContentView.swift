@@ -3,14 +3,24 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var store: PlayerStore
 
+    /// Persisted theme choice ("midnight" / "amber"), read as an enum.
+    @AppStorage("theme") private var themeRaw = Theme.midnight.rawValue
+
     /// Brief "copied" confirmation state for the copy action chip.
     @State private var copied = false
 
     /// Whether the "About" sheet (attribution + contact) is showing.
     @State private var showAbout = false
 
+    private var theme: Theme { Theme(rawValue: themeRaw) ?? .midnight }
+
     /// Current station's accent, or the Nightride magenta before anything plays.
-    private var accent: Color { store.current?.accent ?? Color(hex: 0xCC55FF) }
+    /// Amber theme pins the accent to its phosphor hue regardless of station.
+    private var accent: Color {
+        theme.overridesAccent
+            ? Color(hex: 0xFFB000)
+            : (store.current?.accent ?? Color(hex: 0xCC55FF))
+    }
 
     var body: some View {
         ZStack {
@@ -75,6 +85,7 @@ struct ContentView: View {
                 }
             }
         }
+        .overlay { if theme == .amber { theme.scanlines } }
         .foregroundStyle(.white)
         .preferredColorScheme(.dark)
         .animation(.easeInOut(duration: 0.35), value: store.current?.id)
@@ -201,7 +212,7 @@ struct ContentView: View {
     // visibly "belongs" to the station without hurting text contrast.
     private var background: some View {
         ZStack {
-            Color(hex: 0x0E0A12)
+            theme.ground
             LinearGradient(colors: [accent.opacity(0.16), .clear],
                            startPoint: .top, endPoint: .bottom)
             RadialGradient(colors: [accent.opacity(0.22), .clear],
@@ -220,6 +231,8 @@ struct ContentView: View {
             Text(store.current?.name ?? "Tap play to start")
                 .font(.title.bold())
                 .multilineTextAlignment(.center)
+                // Phosphor bloom in the amber theme.
+                .shadow(color: theme == .amber ? accent.opacity(0.55) : .clear, radius: 6)
 
             // Reserve both lines so a wrapping title doesn't nudge the layout as
             // tracks change.
@@ -380,7 +393,14 @@ private struct ActionChip: View {
 private struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
 
-    private let accent = Color(hex: 0xCC55FF)
+    /// Same persisted key as ContentView — flipping it retints the app live.
+    @AppStorage("theme") private var themeRaw = Theme.midnight.rawValue
+
+    private var theme: Theme { Theme(rawValue: themeRaw) ?? .midnight }
+
+    private var accent: Color {
+        theme.overridesAccent ? Color(hex: 0xFFB000) : Color(hex: 0xCC55FF)
+    }
 
     private var version: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -421,6 +441,16 @@ private struct AboutView: View {
                               url: "https://github.com/tplocic20/nightride-fm/issues", accent: accent)
                 }
                 .padding(.top, 2)
+
+                // Theme picker — flips ContentView live via the shared @AppStorage key.
+                Picker("theme", selection: $themeRaw) {
+                    ForEach(Theme.allCases) { t in
+                        Text(t.label).tag(t.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+                .padding(.top, 8)
 
                 Text("Unofficial fan project — not affiliated with Nightride FM.")
                     .font(.system(size: 11, design: .monospaced))
