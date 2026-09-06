@@ -118,6 +118,44 @@ final class PlayerStore: ObservableObject {
         play(list[nextIdx])
     }
 
+    // MARK: – Sleep timer
+
+    /// Seconds left on the sleep timer, or nil when it's off.
+    @Published private(set) var sleepTimerRemaining: TimeInterval?
+    private var sleepTask: Task<Void, Never>?
+
+    /// Pause playback after `minutes`, fading volume over the last minute so
+    /// the music goes out gently instead of cutting mid-song.
+    func startSleepTimer(minutes: Int) {
+        cancelSleepTimer()
+        sleepTask = Task { [weak self] in
+            var remaining = minutes * 60
+            self?.sleepTimerRemaining = TimeInterval(remaining)
+            while remaining > 0 {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled, let self else { return }
+                remaining -= 1
+                self.sleepTimerRemaining = TimeInterval(remaining)
+                if remaining <= 60 { self.player.volume = Float(remaining) / 60 }
+            }
+            self?.sleepTimerFired()
+        }
+    }
+
+    func cancelSleepTimer() {
+        sleepTask?.cancel()
+        sleepTask = nil
+        sleepTimerRemaining = nil
+        player.volume = 1
+    }
+
+    private func sleepTimerFired() {
+        pause()
+        player.volume = 1
+        sleepTimerRemaining = nil
+        sleepTask = nil
+    }
+
     // MARK: – Audio session
 
     private func configureAudioSession() {

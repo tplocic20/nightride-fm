@@ -87,20 +87,52 @@ struct ContentView: View {
             }
         }
         .overlay(alignment: .topTrailing) {
-            // Discreet info button → "About" (attribution + contact).
-            Button { showAbout = true } label: {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 18))
-                    .foregroundStyle(.white.opacity(0.45))
-                    .padding(16)
-                    .contentShape(Rectangle())
+            HStack(spacing: 4) {
+                sleepTimerMenu
+                // Discreet info button → "About" (attribution + contact).
+                Button { showAbout = true } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .padding(16)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("About")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("About")
         }
         .sheet(isPresented: $showAbout) {
             AboutView().presentationDetents([.medium])
         }
+    }
+
+    /// Sleep timer picker — moon turns accent and counts down while armed.
+    private var sleepTimerMenu: some View {
+        Menu {
+            ForEach([15, 30, 60], id: \.self) { m in
+                Button("\(m) min") { store.startSleepTimer(minutes: m) }
+            }
+            if store.sleepTimerRemaining != nil {
+                Button("off", role: .destructive) { store.cancelSleepTimer() }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "moon.zzz")
+                    .font(.system(size: 18))
+                if let remaining = store.sleepTimerRemaining {
+                    Text(timeString(remaining))
+                        .font(.system(size: 13, design: .monospaced))
+                }
+            }
+            .foregroundStyle(store.sleepTimerRemaining != nil ? accent : .white.opacity(0.45))
+            .padding(16)
+            .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Sleep timer")
+    }
+
+    private func timeString(_ t: TimeInterval) -> String {
+        String(format: "%d:%02d", Int(t) / 60, Int(t) % 60)
     }
 
     /// Flash the copy toast for ~1.4s.
