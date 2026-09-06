@@ -10,6 +10,23 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Fixed
+
+- iOS: **Easter egg crash, for real this time.** The tap was still being
+  created and freed on every flip, and the device audio pipeline kept
+  executing its callback on the dying tap — use-after-free that the simulator
+  tolerated but hardware did not. The tap is now created once and never freed
+  during flips; attach/detach only swap the audio mix. The analysis path is
+  also allocation-free now, as a realtime thread should be.
+
+### Changed
+
+- iOS: **Station name morphs instead of scrambling.** Letters shared between
+  the old and new station name hold still while the rest flickers and
+  re-locks (SpaceWave → DataWave keeps the "a…wave"), settling in 0.45s.
+  Song/artist line is back to plain text — multi-word titles churned too much
+  to read.
+
 ## [1.4.4] - 2026-09-07
 
 ### Fixed
