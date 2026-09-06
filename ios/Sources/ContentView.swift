@@ -213,6 +213,17 @@ struct ContentView: View {
     private var background: some View {
         ZStack {
             theme.ground
+            // Full-bleed artwork: the station's cover fills the screen, blurred
+            // into a color field — the artwork itself becomes the tint.
+            if let station = store.current, let image = Artwork.image(for: station) {
+                Image(uiImage: image)
+                    .resizable()
+                    .interpolation(.none)
+                    .scaledToFill()
+                    .blur(radius: 90)
+                    .opacity(0.28)
+                    .ignoresSafeArea()
+            }
             LinearGradient(colors: [accent.opacity(0.16), .clear],
                            startPoint: .top, endPoint: .bottom)
             RadialGradient(colors: [accent.opacity(0.22), .clear],
