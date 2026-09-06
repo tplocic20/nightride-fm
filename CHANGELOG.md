@@ -10,6 +10,17 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-09-06
+
+### Fixed
+
+- iOS: **Split view no longer hijacks the iPhone on play.** The full-bleed
+  artwork layer added in 1.4.0 used an unframed `scaledToFill`, which reported
+  its full aspect-filled size (~905×905pt for a square cover) to the layout
+  system. That inflated the root stack, pushed the layout past the 600pt
+  tablet breakpoint, and flipped the phone into the iPad split view the moment
+  playback started. The artwork now fills the screen without touching layout.
+
 ## [1.4.0] - 2026-09-06
 
 ### Added
