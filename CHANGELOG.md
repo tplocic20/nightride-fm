@@ -10,6 +10,25 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Added
+
+- iOS: **Scramble-in text animation.** The station name and track line resolve
+  left-to-right out of cycling glyphs on every station switch and track change.
+- iOS: **CRT scanlines toggle** in the About sheet — a standalone on/off for
+  the scanline overlay, replacing the amber theme.
+
+### Changed
+
+- iOS: **Track action chips fade instead of collapsing.** The apple / spotify /
+  youtube / copy row keeps its height reserved when no track is known, so the
+  layout no longer shifts on pause; the chips fade out and become untappable.
+
+### Removed
+
+- iOS: **Amber theme deleted.** The station accent now always drives the UI
+  (midnight behavior); the scanlines live on as a toggle. Existing amber users
+  keep their scanlines enabled automatically.
+
 ## [1.4.1] - 2026-09-06
 
 ### Fixed
