@@ -10,6 +10,14 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Fixed
+
+- iOS: **Easter egg no longer crashes the app on flip.** The spectrum tap's
+  reference was over-released on detach (my C-bridge refcount guess was
+  wrong); the created tap is now transferred to the audio mix, which owns it
+  outright. Reproduced and stress-verified: 6 rapid flip cycles twice over,
+  zero crashes.
+
 ## [1.4.3] - 2026-09-06
 
 ### Added
