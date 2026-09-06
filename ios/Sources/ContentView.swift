@@ -255,22 +255,27 @@ struct ContentView: View {
     }
 
     /// Quick "I love this song" row — search the live track on a streaming
-    /// service or copy "Artist — Title". Only shown when a real track is known.
-    @ViewBuilder
+    /// service or copy "Artist — Title". Always present so its height is
+    /// reserved (no layout shift); it fades and disables when no track is known.
     private var trackActions: some View {
-        if let track = store.nowPlaying, !track.isEmpty {
-            HStack(spacing: 8) {
-                ForEach(MusicService.allCases) { service in
-                    ActionChip(label: service.label, accent: accent) {
-                        MusicSearch.open(service, for: track)
-                    }
+        let hasTrack = store.nowPlaying?.isEmpty == false
+        return HStack(spacing: 8) {
+            ForEach(MusicService.allCases) { service in
+                ActionChip(label: service.label, accent: accent) {
+                    if let track = store.nowPlaying { MusicSearch.open(service, for: track) }
                 }
-                ActionChip(label: "copy", accent: accent) {
+            }
+            ActionChip(label: "copy", accent: accent) {
+                if let track = store.nowPlaying {
                     MusicSearch.copy(track)
                     showToast()
                 }
             }
         }
+        .opacity(hasTrack ? 1 : 0)
+        .disabled(!hasTrack)
+        .allowsHitTesting(hasTrack)
+        .animation(.easeInOut(duration: 0.35), value: hasTrack)
     }
 
     @ViewBuilder
