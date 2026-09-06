@@ -10,6 +10,14 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Added
+
+- iOS: **Artwork easter egg.** Swipe or tap the cover — it flips over to a
+  live pixel-art spectrum (14 bands, LED-style cells with white-capped peaks)
+  driven by a real FFT of the playing stream. The audio tap behind it is
+  attached only while the spectrum is on screen; flip back and the audio path
+  is completely stock again.
+
 ## [1.4.2] - 2026-09-06
 
 ### Added
