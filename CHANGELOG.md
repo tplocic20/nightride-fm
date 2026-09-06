@@ -12,6 +12,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [1.4.1] - 2026-09-06
 
+## [1.4.1] - 2026-09-06
+
 ### Fixed
 
 - iOS: **Split view no longer hijacks the iPhone on play.** The full-bleed
