@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-09-06
+
 ### Added
 
 - iOS: **Artwork easter egg.** Swipe or tap the cover — it flips over to a
