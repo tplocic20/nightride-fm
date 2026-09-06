@@ -87,7 +87,7 @@ final class PlayerStore: ObservableObject {
         icyOutput.setDelegate(icyReader, queue: .main)
         item.add(icyOutput)
         player.replaceCurrentItem(with: item)
-        spectrum.attachIfNeeded(to: item)
+        spectrum.attach(to: item)
         player.play()
     }
 
@@ -164,11 +164,10 @@ final class PlayerStore: ObservableObject {
 
     func setVisualizerActive(_ active: Bool) {
         spectrum.isActive = active
-        if active, let item = player.currentItem {
-            spectrum.attach(to: item)
-        } else {
-            spectrum.detach()
+        if let item = player.currentItem {
+            spectrum.attach(to: item)  // early-returns unless active+new
         }
+        if !active { spectrum.detach() }
     }
 
     // MARK: – Audio session

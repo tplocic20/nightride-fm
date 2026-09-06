@@ -394,8 +394,7 @@ struct ContentView: View {
 }
 
 /// Text-scramble ("decrypt") animation: when `text` changes, letters resolve
-/// left-to-right out of cycling random glyphs. Monospaced by construction of
-/// the caller's font so widths stay stable while glyphs churn.
+/// left-to-right out of cycling random glyphs.
 private struct ScrambleText: View {
     let text: String
 
@@ -455,7 +454,7 @@ private struct PixelSpectrum: View {
                 let origin = CGPoint(x: (size.width - gridW) / 2, y: (size.height - gridH) / 2)
                 for (col, level) in levels.enumerated() {
                     drawColumn(ctx, level: level, col: col, rows: rows,
-                               origin: origin, cell: cell, gap: gap)
+                               origin: origin, cell: cell, gap: gap, gridH: gridH)
                 }
             }
         }
@@ -465,13 +464,13 @@ private struct PixelSpectrum: View {
 
     private func drawColumn(
         _ ctx: GraphicsContext, level: Float, col: Int, rows: Int,
-        origin: CGPoint, cell: CGFloat, gap: CGFloat
+        origin: CGPoint, cell: CGFloat, gap: CGFloat, gridH: CGFloat
     ) {
         let lit = min(rows, Int(level * Float(rows + 1)))
         let x = origin.x + CGFloat(col) * (cell + gap)
         for row in 0..<rows {
             // Row 0 is the bottom of the stack.
-            let y = origin.y + (gridHeight(rows: rows, cell: cell, gap: gap)) - CGFloat(row + 1) * (cell + gap)
+            let y = origin.y + gridH - CGFloat(row + 1) * (cell + gap)
             let rect = CGRect(x: x, y: y, width: cell, height: cell)
             if row < lit {
                 // Peak cell flashes white, the rest shade with height.
@@ -482,10 +481,6 @@ private struct PixelSpectrum: View {
                 ctx.fill(Path(rect), with: .color(.white.opacity(0.06)))
             }
         }
-    }
-
-    private func gridHeight(rows: Int, cell: CGFloat, gap: CGFloat) -> CGFloat {
-        CGFloat(rows) * cell + gap * CGFloat(rows - 1)
     }
 }
 

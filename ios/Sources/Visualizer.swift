@@ -39,10 +39,8 @@ final class AudioSpectrum {
 
     init() {
         // Hann window over the 1024-sample analysis frame.
-        for i in 0..<1024 {
-            window[i] = 0.5 * (1 - cos(2 * .pi * Float(i) / 1023))
-        }
-        fftSetup = vDSP_create_fftsetup(vDSP_Length(10), FFTRadix(kFFTRadix2)).map { $0 }
+        fftSetup = vDSP_create_fftsetup(vDSP_Length(10), FFTRadix(kFFTRadix2))
+        vDSP_hann_window(&window, vDSP_Length(window.count), Int32(vDSP_HANN_NORM))
     }
 
     /// Latest smoothed band levels, 0...1. Called every UI frame; decays the
@@ -59,14 +57,11 @@ final class AudioSpectrum {
 
     // MARK: – Attach / detach (main thread)
 
-    /// Attach the tap to `item` if the egg is active. Called after each play()
-    /// because play() replaces the AVPlayerItem.
-    func attachIfNeeded(to item: AVPlayerItem) {
-        guard isActive, attachedItem !== item else { return }
-        attach(to: item)
-    }
-
+    /// Attach the tap to `item` if the egg is active and not already on it.
+    /// Called both from the flip gesture (via setVisualizerActive) and after
+    /// each play(), because play() replaces the AVPlayerItem.
     func attach(to item: AVPlayerItem) {
+        guard isActive, attachedItem !== item else { return }
         detach()
         var callbacks = MTAudioProcessingTapCallbacks(
             version: kMTAudioProcessingTapCallbacksVersion_0,
