@@ -214,12 +214,19 @@ struct ContentView: View {
         ZStack {
             theme.ground
             // Full-bleed artwork: the station's cover fills the screen, blurred
-            // into a color field — the artwork itself becomes the tint.
+            // into a color field — the artwork itself becomes the tint. Color.clear
+            // + overlay + clipped so the fill image can't inflate the ZStack it
+            // lives in (unframed scaledToFill reports its full aspect size, which
+            // once pushed GeometryReader past the 600pt tablet breakpoint).
             if let station = store.current, let image = Artwork.image(for: station) {
-                Image(uiImage: image)
-                    .resizable()
-                    .interpolation(.none)
-                    .scaledToFill()
+                Color.clear
+                    .overlay(
+                        Image(uiImage: image)
+                            .resizable()
+                            .interpolation(.none)
+                            .scaledToFill()
+                    )
+                    .clipped()
                     .blur(radius: 90)
                     .opacity(0.28)
                     .ignoresSafeArea()
