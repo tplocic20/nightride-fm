@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.4.6] - 2026-09-07
+
 ### Fixed
 
 - iOS: **Crashing easter egg removed.** The artwork-flip spectrum relied on
