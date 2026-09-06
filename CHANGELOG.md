@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-09-06
+
 ### Added
 
 - iOS: **Scramble-in text animation.** The station name and track line resolve
