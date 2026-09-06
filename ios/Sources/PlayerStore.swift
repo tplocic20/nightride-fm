@@ -68,9 +68,9 @@ final class PlayerStore: ObservableObject {
     func play(_ station: Station) {
         current = station
         startedAt = Date()
-        // Show the cached (live-edge) track at once so the line is never blank; the
-        // in-band ICY title corrects it to the buffered audio within ~a second.
-        nowPlaying = latestMeta[station.id]
+        // No cached seed here: latestMeta can be hours old after inactivity, and
+        // a wrong artist that flips on play is worse than ~1s of blank. The
+        // in-band ICY title fills this in as soon as audio is buffered.
 
         open(station, on: source)
         refreshNowPlaying()
@@ -111,9 +111,10 @@ final class PlayerStore: ObservableObject {
     }
 
     func pause() {
-        // The displayed track is driven by the audio's in-band metadata, which
-        // simply stops advancing while paused — it stays on the last song heard,
-        // then resumes from a fresh connection when play() re-opens the stream.
+        // Drop the displayed track: while inactive it would sit there looking
+        // current when it's actually the last song heard (possibly hours old).
+        // The brand name shows instead until the next play() streams fresh ICY.
+        nowPlaying = nil
         player.pause()
         refreshNowPlaying()
     }

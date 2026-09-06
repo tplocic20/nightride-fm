@@ -65,12 +65,18 @@ class PlaybackService : MediaLibraryService() {
 
         player.addListener(object : Player.Listener {
             override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
-                // A station switch shows its cached (live-edge) track immediately;
-                // the in-band ICY title then corrects it to the buffered audio.
+                // A station switch (or pause) clears the line; the in-band ICY
+                // title then fills it with the buffered audio's track.
                 applyMeta()
             }
             override fun onMetadata(metadata: Metadata) = applyIcyMetadata(metadata)
             override fun onPlayerError(error: PlaybackException) = recoverFromHlsFailure()
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                // Paused: clear the line so the last song heard doesn't sit there
+                // looking current after the app's been inactive for hours.
+                if (!playWhenReady) applyMeta()
+            }
         })
 
         session = MediaLibrarySession.Builder(this, player, LibrarySessionCallback()).build()
@@ -146,16 +152,17 @@ class PlaybackService : MediaLibraryService() {
     }
 
     /**
-     * Re-stamp the currently playing item with the freshest "Artist - Title" for
-     * its station. [rawOverride] carries the audio-synced ICY title; without it we
-     * fall back to the cached `/meta` value (used on a station switch).
+     * Re-stamp the currently playing item with the audio-synced ICY title.
+     * [rawOverride] carries it; a null clears the line (station switch, pause) so
+     * a stale cached artist never sits there looking current. The in-band ICY
+     * title re-fills it as soon as audio is buffered.
      * [Player.replaceMediaItem] with the same URI updates the metadata in place
      * without restarting the stream.
      */
     private fun applyMeta(rawOverride: String? = null) {
         val item = player.currentMediaItem ?: return
         val station = Stations.byId(item.mediaId) ?: return
-        val raw = rawOverride ?: latestMeta[station.id].orEmpty()
+        val raw = rawOverride.orEmpty()
         val split = Titles.split(raw, station)
 
         val metadata = MediaMetadata.Builder()

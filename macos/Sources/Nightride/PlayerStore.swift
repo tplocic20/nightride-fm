@@ -29,10 +29,6 @@ final class PlayerStore: ObservableObject {
     private lazy var icyReader = ICYMetadataReader { [weak self] title in
         Task { @MainActor [weak self] in self?.handleICYTitle(title) }
     }
-    private var meta: MetaStream?
-    /// Latest known track per station id — kept warm so selecting a station
-    /// shows its current track instantly, instead of waiting for the next change.
-    private var latestMeta: [String: TrackMeta] = [:]
     private var rateObserver: NSKeyValueObservation?
 
     init() {
@@ -43,9 +39,6 @@ final class PlayerStore: ObservableObject {
                 self?.refreshNowPlaying()
             }
         }
-        // Connect to the metadata feed at launch so every station's current
-        // track is cached before the user ever hits play.
-        startMeta()
     }
 
     deinit {
@@ -62,11 +55,9 @@ final class PlayerStore: ObservableObject {
         // still runs on the shared curve, and the selected/previous rows glide in
         // step with the others instead of snapping.
         current = station
-        // Show the cached (live-edge) track at once so the line is never blank; the
-        // in-band ICY title corrects it to the buffered audio within ~a second.
-        withAnimation(Theme.transition) {
-            nowPlaying = latestMeta[station.id]
-        }
+        // No cached seed here: latestMeta can be hours old after inactivity, and
+        // a wrong artist that flips on play is worse than ~1s of blank. The
+        // in-band ICY title fills this in as soon as audio is buffered.
         startedAt = Date()
 
         open(station, on: source)
@@ -109,9 +100,10 @@ final class PlayerStore: ObservableObject {
     }
 
     func pause() {
-        // The displayed track is driven by the audio's in-band metadata, which
-        // simply stops advancing while paused — it stays on the last song heard,
-        // then resumes from a fresh connection when play() re-opens the stream.
+        // Drop the displayed track: while inactive it would sit there looking
+        // current when it's actually the last song heard (possibly hours old).
+        // The brand name shows instead until the next play() streams fresh ICY.
+        withAnimation(Theme.transition) { nowPlaying = nil }
         player.pause()
         refreshNowPlaying()
     }
@@ -128,24 +120,6 @@ final class PlayerStore: ObservableObject {
     }
 
     // MARK: – Metadata
-
-    private func startMeta() {
-        guard meta == nil else { return }
-        meta = MetaStream { [weak self] updates in
-            Task { @MainActor [weak self] in
-                self?.handleMeta(updates)
-            }
-        }
-        meta?.start()
-    }
-
-    /// The `/meta` feed is the live edge (instant), so it only warms the per-station
-    /// cache that feeds the instant display on station-switch. The live station's
-    /// now-playing line is driven by the audio's in-band ICY metadata in
-    /// `handleICYTitle`, not from here.
-    private func handleMeta(_ updates: [String: TrackMeta]) {
-        latestMeta.merge(updates) { _, new in new }
-    }
 
     /// Apply an in-band ICY `StreamTitle` from the playing stream. It rides the same
     /// buffer as the audio, so the displayed track flips exactly when the listener
