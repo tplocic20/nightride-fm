@@ -10,6 +10,29 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Fixed
+
+- All platforms: **No more stale artist after the app's been idle.** The
+  now-playing line used to sit on the last song heard (possibly hours old) and
+  visibly flip the moment you hit play. It now shows the brand name while idle
+  and clears on pause/station switch; the in-band ICY title fills it in as
+  playback buffers.
+
+### Removed
+
+- All platforms: **Dormant HLS transport code deleted** (transport enum,
+  HLS→MP3 failover, saved preferences, Android `media3-exoplayer-hls` dep).
+  MP3-only since 1.3.0; the code lives in git history if native HLS support
+  ever improves.
+- Dead code: unused `TrackMeta.album` field (Apple clients), unused macOS
+  theme colors, the now-unused macOS `/meta` SSE client, and two unused
+  Android Gradle dependencies.
+
+### Changed
+
+- Comment cleanup across macOS/CarPlay/MetaStream — comments trimmed to the
+  "why", not a restatement of the code.
+
 ## [1.3.3] - 2026-06-19
 
 ### Changed
