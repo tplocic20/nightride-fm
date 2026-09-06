@@ -21,10 +21,11 @@ final class AudioSpectrum {
     /// Whether the egg is on screen. Set from the UI; gates attaching.
     var isActive = false
 
-    // Attach/detach happens on the main thread only. Raw ref: create returns
-    // a +1 we own and release on detach; the mix holds its own retain.
+    // Attach/detach happens on the main thread only. The tap ref returned by
+    // create is transferred (takeRetainedValue) into audioTapProcessor, which
+    // owns it from then on — detach must NOT release it manually (over-release
+    // = SIGSEGV, learned the hard way).
     private var attachedItem: AVPlayerItem?
-    private var tap: MTAudioProcessingTap?
 
     // Render-thread state, touched only from tap callbacks.
     private var sampleRate: Float = 0
@@ -93,8 +94,9 @@ final class AudioSpectrum {
             Unmanaged.passRetained(self).release()  // balance the passRetained
             return
         }
-        tap = tapRef
-        // The track-parameters route: audioTapProcessor per track.
+        // The track-parameters route: audioTapProcessor per track. Ownership
+        // of the created ref transfers here — never release it manually later
+        // (over-release = SIGSEGV, learned the hard way).
         let params = AVMutableAudioMixInputParameters(track: nil)
         params.audioTapProcessor = tapRef
         let mix = AVMutableAudioMix()
@@ -104,10 +106,10 @@ final class AudioSpectrum {
     }
 
     func detach() {
+        // Drop the mix: the tap (and its finalize → clientInfo release) dies
+        // with its last reference. Never release the ref ourselves here.
         attachedItem?.audioMix = nil
-        if let tapRef = tap { Unmanaged.passUnretained(tapRef).release() }  // create's +1
         attachedItem = nil
-        tap = nil
         formatOK = false
     }
 
