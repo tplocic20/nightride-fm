@@ -164,15 +164,21 @@ struct ContentView: View {
 
     // MARK: – Subviews
 
-    // Dark, constant ground with a subtle per-station tint — distinct enough to
-    // tell stations apart without ever hurting text contrast.
+    // Station-tinted ground: dark base, a wide radial wash of the station's
+    // accent, and a soft glow bleeding from the artwork position — the screen
+    // visibly "belongs" to the station without hurting text contrast.
     private var background: some View {
         ZStack {
             Color(hex: 0x0E0A12)
+            LinearGradient(colors: [accent.opacity(0.16), .clear],
+                           startPoint: .top, endPoint: .bottom)
             RadialGradient(colors: [accent.opacity(0.22), .clear],
                            center: .center, startRadius: 0, endRadius: 440)
+            RadialGradient(colors: [accent.opacity(0.18), .clear],
+                           center: UnitPoint(x: 0.5, y: 0.22), startRadius: 0, endRadius: 300)
         }
         .ignoresSafeArea()
+        .animation(.easeInOut(duration: 0.6), value: store.current?.id)
     }
 
     /// Station name + the live "Artist — Title" line (no cover/chips) so the
@@ -221,6 +227,18 @@ struct ContentView: View {
                 .scaledToFit()
                 .frame(width: size, height: size)
                 .overlay(Rectangle().strokeBorder(accent.opacity(0.6), lineWidth: 1))
+                // Blurred duplicate behind the cover: an artwork-sourced glow
+                // that recolors itself with every station switch.
+                .background(
+                    Image(uiImage: image)
+                        .resizable()
+                        .interpolation(.none)
+                        .scaledToFill()
+                        .frame(width: size, height: size)
+                        .blur(radius: 36)
+                        .opacity(0.35)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                )
                 .shadow(color: accent.opacity(0.5), radius: 24)
         } else {
             Image(systemName: store.isPlaying ? "waveform" : "moon.stars")
