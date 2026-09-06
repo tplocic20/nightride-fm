@@ -3,8 +3,10 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var store: PlayerStore
 
-    /// Persisted theme choice ("midnight" / "amber"), read as an enum.
-    @AppStorage("theme") private var themeRaw = Theme.midnight.rawValue
+    /// CRT scanline overlay, off by default. Seeds itself from the old amber
+    /// theme key so anyone who had amber keeps their scanlines.
+    @AppStorage("scanlines") private var scanlinesOn =
+        UserDefaults.standard.string(forKey: "theme") == "amber"
 
     /// Brief "copied" confirmation state for the copy action chip.
     @State private var copied = false
@@ -12,15 +14,8 @@ struct ContentView: View {
     /// Whether the "About" sheet (attribution + contact) is showing.
     @State private var showAbout = false
 
-    private var theme: Theme { Theme(rawValue: themeRaw) ?? .midnight }
-
     /// Current station's accent, or the Nightride magenta before anything plays.
-    /// Amber theme pins the accent to its phosphor hue regardless of station.
-    private var accent: Color {
-        theme.overridesAccent
-            ? Color(hex: 0xFFB000)
-            : (store.current?.accent ?? Color(hex: 0xCC55FF))
-    }
+    private var accent: Color { store.current?.accent ?? Color(hex: 0xCC55FF) }
 
     var body: some View {
         ZStack {
@@ -85,7 +80,7 @@ struct ContentView: View {
                 }
             }
         }
-        .overlay { if theme == .amber { theme.scanlines } }
+        .overlay { if scanlinesOn { Scanlines() } }
         .foregroundStyle(.white)
         .preferredColorScheme(.dark)
         .animation(.easeInOut(duration: 0.35), value: store.current?.id)
@@ -212,7 +207,7 @@ struct ContentView: View {
     // visibly "belongs" to the station without hurting text contrast.
     private var background: some View {
         ZStack {
-            theme.ground
+            Color(hex: 0x0E0A12)
             // Full-bleed artwork: the station's cover fills the screen, blurred
             // into a color field — the artwork itself becomes the tint. Color.clear
             // + overlay + clipped so the fill image can't inflate the ZStack it
@@ -247,8 +242,6 @@ struct ContentView: View {
             Text(store.current?.name ?? "Tap play to start")
                 .font(.title.bold())
                 .multilineTextAlignment(.center)
-                // Phosphor bloom in the amber theme.
-                .shadow(color: theme == .amber ? accent.opacity(0.55) : .clear, radius: 6)
 
             // Reserve both lines so a wrapping title doesn't nudge the layout as
             // tracks change.
@@ -366,6 +359,23 @@ struct ContentView: View {
     }
 }
 
+/// Horizontal CRT scanline overlay drawn in a single Canvas pass.
+private struct Scanlines: View {
+    var body: some View {
+        Canvas { ctx, size in
+            var y: CGFloat = 0
+            while y < size.height {
+                ctx.fill(
+                    Path(CGRect(x: 0, y: y, width: size.width, height: 1)),
+                    with: .color(.black.opacity(0.16))
+                )
+                y += 3
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 /// Tiny non-intrusive confirmation pill (e.g. after copying). Translucent dark
 /// capsule with a thin accent edge — reads as part of the synthwave chrome.
 private struct Toast: View {
@@ -414,13 +424,10 @@ private struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
 
     /// Same persisted key as ContentView — flipping it retints the app live.
-    @AppStorage("theme") private var themeRaw = Theme.midnight.rawValue
+    @AppStorage("scanlines") private var scanlinesOn =
+        UserDefaults.standard.string(forKey: "theme") == "amber"
 
-    private var theme: Theme { Theme(rawValue: themeRaw) ?? .midnight }
-
-    private var accent: Color {
-        theme.overridesAccent ? Color(hex: 0xFFB000) : Color(hex: 0xCC55FF)
-    }
+    private let accent = Color(hex: 0xCC55FF)
 
     private var version: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -462,15 +469,14 @@ private struct AboutView: View {
                 }
                 .padding(.top, 2)
 
-                // Theme picker — flips ContentView live via the shared @AppStorage key.
-                Picker("theme", selection: $themeRaw) {
-                    ForEach(Theme.allCases) { t in
-                        Text(t.label).tag(t.rawValue)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .fixedSize()
-                .padding(.top, 8)
+                // CRT scanlines toggle — flips ContentView live via the shared @AppStorage key.
+                Toggle("CRT scanlines", isOn: $scanlinesOn)
+                    .font(.system(size: 13, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .tint(accent)
+                    .fixedSize()
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
 
                 Text("Unofficial fan project — not affiliated with Nightride FM.")
                     .font(.system(size: 11, design: .monospaced))
