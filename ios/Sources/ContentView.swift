@@ -8,14 +8,11 @@ struct ContentView: View {
     @AppStorage("scanlines") private var scanlinesOn =
         UserDefaults.standard.string(forKey: "theme") == "amber"
 
-    /// Whether the artwork easter egg is flipped to the spectrum side.
-    @State private var artFlipped = false
+    /// Whether the "About" sheet (attribution + contact) is showing.
+    @State private var showAbout = false
 
     /// Brief "copied" confirmation state for the copy action chip.
     @State private var copied = false
-
-    /// Whether the "About" sheet (attribution + contact) is showing.
-    @State private var showAbout = false
 
     /// Current station's accent, or the Nightride magenta before anything plays.
     private var accent: Color { store.current?.accent ?? Color(hex: 0xCC55FF) }
@@ -285,22 +282,8 @@ struct ContentView: View {
     @ViewBuilder
     private func coverView(size: CGFloat) -> some View {
         if let station = store.current, let image = Artwork.image(for: station) {
-            ZStack {
-                if artFlipped {
-                    PixelSpectrum(spectrum: store.spectrum, accent: accent)
-                        .transition(.opacity)
-                } else {
-                    artworkCover(station: station, image: image, size: size)
-                        .transition(.opacity)
-                }
-            }
-            .frame(width: size, height: size)
-            .overlay(Rectangle().strokeBorder(accent.opacity(0.6), lineWidth: 1))
-            // Easter egg: swipe or tap the cover — it flips to a pixel
-            // spectrum fed by the live stream.
-            .rotation3DEffect(.degrees(artFlipped ? 180 : 0), axis: (0, 1, 0), perspective: 0.6)
-            .onTapGesture { flipArtwork() }
-            .gesture(DragGesture(minimumDistance: 12).onEnded { _ in flipArtwork() })
+            artworkCover(station: station, image: image, size: size)
+                .overlay(Rectangle().strokeBorder(accent.opacity(0.6), lineWidth: 1))
         } else {
             Image(systemName: store.isPlaying ? "waveform" : "moon.stars")
                 .font(.system(size: min(size * 0.36, 80)))
@@ -309,12 +292,6 @@ struct ContentView: View {
                               isActive: store.isPlaying)
                 .foregroundStyle(accent)
         }
-    }
-
-    private func flipArtwork() {
-        let spring = Animation.spring(response: 0.55, dampingFraction: 0.8)
-        withAnimation(spring) { artFlipped.toggle() }
-        store.setVisualizerActive(artFlipped)
     }
 
     /// The station cover with its blurred artwork glow behind it.
@@ -433,57 +410,6 @@ private struct MorphText: View {
                 return c == " " ? " " : Self.glyphs.randomElement()!
             })
             try? await Task.sleep(for: .seconds(0.03))
-        }
-    }
-}
-
-/// The easter egg's back face: a pixel-art spectrum. Redrawn every frame via
-/// TimelineView reading the engine's snapshot — no published state churns
-/// SwiftUI at 60fps, only the Canvas contents change.
-private struct PixelSpectrum: View {
-    let spectrum: AudioSpectrum
-    let accent: Color
-
-    var body: some View {
-        TimelineView(.animation) { _ in
-            Canvas { ctx, size in
-                let levels = spectrum.snapshot()
-                let cols = levels.count
-                let rows = 8
-                let gap: CGFloat = 2
-                let cell = min((size.width - gap * CGFloat(cols - 1)) / CGFloat(cols),
-                               (size.height - gap * CGFloat(rows - 1)) / CGFloat(rows))
-                let gridW = CGFloat(cols) * cell + gap * CGFloat(cols - 1)
-                let gridH = CGFloat(rows) * cell + gap * CGFloat(rows - 1)
-                let origin = CGPoint(x: (size.width - gridW) / 2, y: (size.height - gridH) / 2)
-                for (col, level) in levels.enumerated() {
-                    drawColumn(ctx, level: level, col: col, rows: rows,
-                               origin: origin, cell: cell, gap: gap, gridH: gridH)
-                }
-            }
-        }
-        .background(Color(hex: 0x0E0A12).opacity(0.6))
-        .shadow(color: accent.opacity(0.5), radius: 16)
-    }
-
-    private func drawColumn(
-        _ ctx: GraphicsContext, level: Float, col: Int, rows: Int,
-        origin: CGPoint, cell: CGFloat, gap: CGFloat, gridH: CGFloat
-    ) {
-        let lit = min(rows, Int(level * Float(rows + 1)))
-        let x = origin.x + CGFloat(col) * (cell + gap)
-        for row in 0..<rows {
-            // Row 0 is the bottom of the stack.
-            let y = origin.y + gridH - CGFloat(row + 1) * (cell + gap)
-            let rect = CGRect(x: x, y: y, width: cell, height: cell)
-            if row < lit {
-                // Peak cell flashes white, the rest shade with height.
-                let top = row == lit - 1
-                let shade = accent.opacity(0.55 + 0.45 * Double(row) / Double(rows))
-                ctx.fill(Path(rect), with: .color(top ? .white : shade))
-            } else {
-                ctx.fill(Path(rect), with: .color(.white.opacity(0.06)))
-            }
         }
     }
 }
