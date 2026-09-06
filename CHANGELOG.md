@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-09-06
+
 ### Fixed
 
 - All platforms: **No more stale artist after the app's been idle.** The
