@@ -228,8 +228,6 @@ struct ContentView: View {
                            startPoint: .top, endPoint: .bottom)
             RadialGradient(colors: [accent.opacity(0.22), .clear],
                            center: .center, startRadius: 0, endRadius: 440)
-            RadialGradient(colors: [accent.opacity(0.18), .clear],
-                           center: UnitPoint(x: 0.5, y: 0.22), startRadius: 0, endRadius: 300)
         }
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.6), value: store.current?.id)
@@ -298,7 +296,6 @@ struct ContentView: View {
                         .opacity(0.35)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 )
-                .shadow(color: accent.opacity(0.5), radius: 24)
         } else {
             Image(systemName: store.isPlaying ? "waveform" : "moon.stars")
                 .font(.system(size: min(size * 0.36, 80)))
