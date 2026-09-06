@@ -282,6 +282,9 @@ struct ContentView: View {
                 .interpolation(.none)   // keep the pixel art crisp when scaled
                 .scaledToFit()
                 .frame(width: size, height: size)
+                // Keyed per station so a switch crossfades with a slight settle.
+                .id(station.id)
+                .transition(.opacity.combined(with: .scale(scale: 1.06)))
                 .overlay(Rectangle().strokeBorder(accent.opacity(0.6), lineWidth: 1))
                 // Blurred duplicate behind the cover: an artwork-sourced glow
                 // that recolors itself with every station switch.
@@ -316,6 +319,8 @@ struct ContentView: View {
             Button { store.togglePlayPause() } label: {
                 Image(systemName: store.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 72))
+                    // Symbol morph: play ⇄ pause slides between the glyphs.
+                    .contentTransition(.symbolEffect(.replace))
             }
             .foregroundStyle(accent)
             .shadow(color: accent.opacity(0.55), radius: 12)
