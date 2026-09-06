@@ -15,17 +15,20 @@ final class AudioSpectrum {
     private let lock = OSAllocatedUnfairLock<State>(initialState: State())
     private struct State {
         var levels = [Float](repeating: 0, count: AudioSpectrum.bandCount)
-        var lastCompute = Date.distantPast
+        var lastCompute: CFAbsoluteTime = 0
     }
 
     /// Whether the egg is on screen. Set from the UI; gates attaching.
     var isActive = false
 
-    // Attach/detach happens on the main thread only. The tap ref returned by
-    // create is transferred (takeRetainedValue) into audioTapProcessor, which
-    // owns it from then on — detach must NOT release it manually (over-release
-    // = SIGSEGV, learned the hard way).
+    // The tap is created ONCE and never freed while the engine lives. Early
+    // versions allocated + freed a tap on every flip, and the device audio
+    // pipeline would still be executing process() on the dying tap —
+    // use-after-free, SIGSEGV on real hardware (the simulator tolerated it).
+    // With a persistent tap there is nothing to race over: attach/detach only
+    // swap the audioMix, and buffers pass through untouched.
     private var attachedItem: AVPlayerItem?
+    private var tap: MTAudioProcessingTap?
 
     // Render-thread state, touched only from tap callbacks.
     private var sampleRate: Float = 0
@@ -37,9 +40,9 @@ final class AudioSpectrum {
     private var fftReal = [Float](repeating: 0, count: 1024)
     private var fftImag = [Float](repeating: 0, count: 1024)
     private var fftSetup: FFTSetup?
+    private var scratch = [Float](repeating: 0, count: AudioSpectrum.bandCount)
 
     init() {
-        // Hann window over the 1024-sample analysis frame.
         fftSetup = vDSP_create_fftsetup(vDSP_Length(10), FFTRadix(kFFTRadix2))
         vDSP_hann_window(&window, vDSP_Length(window.count), Int32(vDSP_HANN_NORM))
     }
@@ -47,10 +50,11 @@ final class AudioSpectrum {
     /// Latest smoothed band levels, 0...1. Called every UI frame; decays the
     /// bars toward zero when the stream is paused and callbacks stop firing.
     func snapshot() -> [Float] {
-        lock.withLock { state in
-            if Date().timeIntervalSince(state.lastCompute) > 0.12 {
+        let now = CFAbsoluteTimeGetCurrent()
+        return lock.withLock { state in
+            if now - state.lastCompute > 0.12 {
                 for i in state.levels.indices { state.levels[i] *= 0.88 }
-                state.lastCompute = Date()
+                state.lastCompute = now
             }
             return state.levels
         }
@@ -58,12 +62,27 @@ final class AudioSpectrum {
 
     // MARK: – Attach / detach (main thread)
 
-    /// Attach the tap to `item` if the egg is active and not already on it.
-    /// Called both from the flip gesture (via setVisualizerActive) and after
-    /// each play(), because play() replaces the AVPlayerItem.
+    /// Attach the (persistent) tap to `item` if the egg is active and not
+    /// already on it. Called from the flip gesture and after each play(),
+    /// because play() replaces the AVPlayerItem.
     func attach(to item: AVPlayerItem) {
-        guard isActive, attachedItem !== item else { return }
-        detach()
+        guard isActive, attachedItem !== item, let tap = ensureTap() else { return }
+        let params = AVMutableAudioMixInputParameters(track: nil)
+        params.audioTapProcessor = tap
+        let mix = AVMutableAudioMix()
+        mix.inputParameters = [params]
+        item.audioMix = mix
+        attachedItem = item
+    }
+
+    func detach() {
+        // Only drops the mix — the tap itself outlives every attach cycle.
+        attachedItem?.audioMix = nil
+        attachedItem = nil
+    }
+
+    private func ensureTap() -> MTAudioProcessingTap? {
+        if let tap { return tap }
         var callbacks = MTAudioProcessingTapCallbacks(
             version: kMTAudioProcessingTapCallbacksVersion_0,
             clientInfo: Unmanaged.passRetained(self).toOpaque(),
@@ -91,26 +110,11 @@ final class AudioSpectrum {
         guard MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks,
                                          kMTAudioProcessingTapCreationFlag_PostEffects, &created) == noErr,
               let tapRef = created else {
-            Unmanaged.passRetained(self).release()  // balance the passRetained
-            return
+            Unmanaged.passRetained(self).release()
+            return nil
         }
-        // The track-parameters route: audioTapProcessor per track. Ownership
-        // of the created ref transfers here — never release it manually later
-        // (over-release = SIGSEGV, learned the hard way).
-        let params = AVMutableAudioMixInputParameters(track: nil)
-        params.audioTapProcessor = tapRef
-        let mix = AVMutableAudioMix()
-        mix.inputParameters = [params]
-        item.audioMix = mix
-        attachedItem = item
-    }
-
-    func detach() {
-        // Drop the mix: the tap (and its finalize → clientInfo release) dies
-        // with its last reference. Never release the ref ourselves here.
-        attachedItem?.audioMix = nil
-        attachedItem = nil
-        formatOK = false
+        tap = tapRef
+        return tapRef
     }
 
     /// Render thread: capture stream format once per tap.
@@ -155,27 +159,28 @@ final class AudioSpectrum {
                 for i in 0..<n {
                     real[i] = ring[(ringWrite + i) % ring.count] * window[i]
                 }
-                imag.assign(repeating: 0)
+                imag.update(repeating: 0)
                 var split = DSPSplitComplex(realp: real.baseAddress!, imagp: imag.baseAddress!)
                 vDSP_fft_zrip(fftSetup!, &split, 1, vDSP_Length(10), FFTDirection(FFT_FORWARD))
 
                 // 14 log-spaced bands, 50 Hz .. 14 kHz, dB-mapped to 0...1.
+                // No allocations in here — this runs on the render thread.
                 let binHz = sampleRate / Float(n)
-                let newLevels = AudioSpectrum.bandEdges.map { lo, hi -> Float in
-                    let b0 = max(1, Int(lo / binHz))
-                    let b1 = min(n / 2 - 1, Int(hi / binHz))
-                    guard b1 > b0 else { return 0 }
+                for (band, edges) in AudioSpectrum.bandEdges.enumerated() {
+                    let b0 = max(1, Int(edges.0 / binHz))
+                    let b1 = min(n / 2 - 1, Int(edges.1 / binHz))
+                    guard b1 > b0 else { scratch[band] = 0; continue }
                     var energy: Float = 0
                     for b in b0...b1 { energy += sqrt(real[b] * real[b] + imag[b] * imag[b]) }
                     let db = 20 * log10(energy / Float((b1 - b0) * n) + 1e-6)
-                    return min(1, max(0, (db + 66) / 60))
+                    scratch[band] = min(1, max(0, (db + 66) / 60))
                 }
                 lock.withLock { state in
                     for i in state.levels.indices {
                         // Fast attack, slow decay — the classic VU feel.
-                        state.levels[i] = max(newLevels[i], state.levels[i] * 0.82)
+                        state.levels[i] = max(scratch[i], state.levels[i] * 0.82)
                     }
-                    state.lastCompute = Date()
+                    state.lastCompute = CFAbsoluteTimeGetCurrent()
                 }
             }
         }

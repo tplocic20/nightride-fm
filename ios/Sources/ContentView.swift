@@ -243,13 +243,14 @@ struct ContentView: View {
     /// scramble effect when their text changes.
     private var trackInfo: some View {
         VStack(spacing: 16) {
-            ScrambleText(text: store.current?.name ?? "Tap play to start")
+            MorphText(text: store.current?.name ?? "Tap play to start")
                 .font(.title.bold())
                 .multilineTextAlignment(.center)
 
             // Reserve both lines so a wrapping title doesn't nudge the layout as
-            // tracks change.
-            ScrambleText(text: store.nowPlaying?.display.isEmpty == false ? store.nowPlaying!.display : "Nightride FM")
+            // tracks change. Plain text — morphing multi-word titles churns too
+            // much to read.
+            Text(store.nowPlaying?.display.isEmpty == false ? store.nowPlaying!.display : "Nightride FM")
                 .font(.body.weight(.medium))
                 .foregroundStyle(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
@@ -393,40 +394,43 @@ struct ContentView: View {
     }
 }
 
-/// Text-scramble ("decrypt") animation: when `text` changes, letters resolve
-/// left-to-right out of cycling random glyphs.
-private struct ScrambleText: View {
+/// Shared-letter morph animation: when `text` changes, characters that sit at
+/// the same index in the old and new text hold still (SpaceWave → DataWave
+/// keeps "a…wave"), everything else churns glyphs briefly then resolves —
+/// like a signal re-locking. Fast (0.45s) so it reads as a flick, not a show.
+private struct MorphText: View {
     let text: String
 
     @State private var display: String = ""
+    @State private var settled = ""
 
     /// Glyph pool the unresolved characters cycle through.
     private static let glyphs = Array("!<>-_\\/[]{}=+*^?#")
 
     var body: some View {
         Text(display)
-            .task(id: text) { await scramble() }
+            .task(id: text) { await morph() }
     }
 
-    private func scramble() async {
-        guard !text.isEmpty else {
-            display = text
-            return
-        }
-        let chars = Array(text)
-        let duration = 0.7
+    private func morph() async {
+        guard text != settled else { display = text; return }
+        let target = Array(text)
+        let from = Array(settled)
+        let duration = 0.45
         let started = Date()
         while true {
             let progress = Date().timeIntervalSince(started) / duration
             if progress >= 1 {
                 display = text
+                settled = text
                 return
             }
-            // Characters resolve left-to-right; unresolved ones churn glyphs
-            // (spaces stay spaces so word shapes hold).
-            let frontier = Int(Double(chars.count) * progress)
-            display = String(chars.enumerated().map { i, c in
-                i < frontier || c == " " ? c : Self.glyphs.randomElement()!
+            let frontier = Int(Double(target.count) * progress)
+            display = String(target.enumerated().map { i, c in
+                // Shared letters hold; unresolved churn; spaces stay spaces.
+                if i < from.count, from[i] == c { return c }
+                if i < frontier { return c }
+                return c == " " ? " " : Self.glyphs.randomElement()!
             })
             try? await Task.sleep(for: .seconds(0.03))
         }
