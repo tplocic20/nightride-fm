@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-09-07
+
 ### Fixed
 
 - iOS: **Easter egg no longer crashes the app on flip.** The spectrum tap's
