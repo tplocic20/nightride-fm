@@ -10,7 +10,24 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
-## [1.3.5] - 2026-09-06
+## [1.4.0] - 2026-09-06
+
+### Added
+
+- iOS: **Sleep timer.** Pick 15/30/60 minutes from the moon button; volume
+  fades over the last minute and playback pauses gently instead of cutting.
+- iOS: **Themes.** *midnight* (per-station accent, the classic look) and
+  *amber* (monochrome phosphor CRT — one hue, scanlines, text bloom).
+  Switchable from the About sheet, applied live.
+- iOS: **Full-bleed artwork.** The station's cover fills the screen, blurred
+  into a color field — the artwork itself becomes the background tint.
+- iOS: **Micro-interactions.** Play/pause glyph morph and an artwork
+  crossfade-with-settle on station switch.
+
+### Changed
+
+- iOS: **Richer station tinting.** Layered accent gradients recolor the whole
+  player per station, with a blurred artwork glow behind the cover.
 
 ## [1.3.5] - 2026-09-06
 
