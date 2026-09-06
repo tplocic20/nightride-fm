@@ -10,10 +10,6 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
-## [1.4.0] - 2026-09-06
-
-## [1.4.0] - 2026-09-06
-
 ### Added
 
 - iOS: **Sleep timer.** Pick 15/30/60 minutes from the moon button; volume
