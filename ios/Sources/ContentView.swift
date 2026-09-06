@@ -236,16 +236,17 @@ struct ContentView: View {
     }
 
     /// Station name + the live "Artist — Title" line (no cover/chips) so the
-    /// landscape layout can place them beside the cover.
+    /// landscape layout can place them beside the cover. Both animate with the
+    /// scramble effect when their text changes.
     private var trackInfo: some View {
         VStack(spacing: 16) {
-            Text(store.current?.name ?? "Tap play to start")
+            ScrambleText(text: store.current?.name ?? "Tap play to start")
                 .font(.title.bold())
                 .multilineTextAlignment(.center)
 
             // Reserve both lines so a wrapping title doesn't nudge the layout as
             // tracks change.
-            Text(store.nowPlaying?.display.isEmpty == false ? store.nowPlaying!.display : "Nightride FM")
+            ScrambleText(text: store.nowPlaying?.display.isEmpty == false ? store.nowPlaying!.display : "Nightride FM")
                 .font(.body.weight(.medium))
                 .foregroundStyle(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
@@ -355,6 +356,47 @@ struct ContentView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .strokeBorder(accent.opacity(0.4), lineWidth: 1)
             )
+        }
+    }
+}
+
+/// Text-scramble ("decrypt") animation: when `text` changes, letters resolve
+/// left-to-right out of cycling random glyphs. Monospaced by construction of
+/// the caller's font so widths stay stable while glyphs churn.
+private struct ScrambleText: View {
+    let text: String
+
+    @State private var display: String = ""
+
+    /// Glyph pool the unresolved characters cycle through.
+    private static let glyphs = Array("!<>-_\\/[]{}=+*^?#")
+
+    var body: some View {
+        Text(display)
+            .task(id: text) { await scramble() }
+    }
+
+    private func scramble() async {
+        guard !text.isEmpty else {
+            display = text
+            return
+        }
+        let chars = Array(text)
+        let duration = 0.7
+        let started = Date()
+        while true {
+            let progress = Date().timeIntervalSince(started) / duration
+            if progress >= 1 {
+                display = text
+                return
+            }
+            // Characters resolve left-to-right; unresolved ones churn glyphs
+            // (spaces stay spaces so word shapes hold).
+            let frontier = Int(Double(chars.count) * progress)
+            display = String(chars.enumerated().map { i, c in
+                i < frontier || c == " " ? c : Self.glyphs.randomElement()!
+            })
+            try? await Task.sleep(for: .seconds(0.03))
         }
     }
 }
