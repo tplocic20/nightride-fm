@@ -12,6 +12,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [1.3.5] - 2026-09-06
 
+## [1.3.5] - 2026-09-06
+
 ### Changed
 
 - iOS: **CarPlay opens straight into playback.** The Now Playing screen is now
