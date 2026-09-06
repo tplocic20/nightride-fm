@@ -10,6 +10,16 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Fixed
+
+- iOS: **Crashing easter egg removed.** The artwork-flip spectrum relied on
+  `MTAudioProcessingTap`, which on iOS 26 devices invokes its callbacks
+  through an out-of-process XPC path where the client context arrives NULL —
+  unfixable from app code (crash: `aptapR_PrepareTapIfNeeded` /
+  `EXC_BAD_ACCESS`). The cover is back to plain artwork with its glow. The
+  pixel-spectrum UI and FFT engine live in git history, ready to return on a
+  supported audio-tap API or an `AVSampleBufferAudioRenderer` re-plumb.
+
 ## [1.4.5] - 2026-09-07
 
 ### Fixed
