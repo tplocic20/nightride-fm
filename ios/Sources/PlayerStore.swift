@@ -30,6 +30,17 @@ final class PlayerStore: ObservableObject {
     init() {
         configureAudioSession()
 
+        // Remember the last station so a fresh launch (phone or CarPlay) can
+        // resume with one tap instead of picking from the list again.
+        if let id = UserDefaults.standard.string(forKey: "lastStationId"),
+           let station = Stations.all.first(where: { $0.id == id }) {
+            current = station
+            // Publish station name + logo to Now Playing (CarPlay / Lock Screen)
+            // immediately, in paused state, so the car shows the station before
+            // any audio is started.
+            refreshNowPlaying()
+        }
+
         rateObserver = player.observe(\.rate, options: [.new]) { [weak self] _, change in
             let rate = change.newValue ?? 0
             Task { @MainActor [weak self] in
@@ -55,6 +66,7 @@ final class PlayerStore: ObservableObject {
 
     func play(_ station: Station) {
         current = station
+        UserDefaults.standard.set(station.id, forKey: "lastStationId")
         startedAt = Date()
         // No cached seed here: latestMeta can be hours old after inactivity, and
         // a wrong artist that flips on play is worse than ~1s of blank. The

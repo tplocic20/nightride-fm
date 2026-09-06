@@ -3,11 +3,12 @@ import Combine
 import MediaPlayer
 import UIKit
 
-/// CarPlay entry point. Presents a `CPListTemplate` of stations (each row shows
-/// the station's live track) and pushes the system `CPNowPlayingTemplate` on
-/// pick. Playback flows through the phone's `PlayerStore` — no CarPlay-specific
-/// glue. Dead weight without the `com.apple.developer.carplay-audio`
-/// entitlement (the Simulator doesn't enforce it, so the UI is testable there).
+/// CarPlay entry point. Roots on the system `CPNowPlayingTemplate` (one tap to
+/// play/resume the last station) with a trailing nav-bar button that pushes the
+/// station list. Playback flows through the phone's `PlayerStore` — no
+/// CarPlay-specific glue. Dead weight without the
+/// `com.apple.developer.carplay-audio` entitlement (the Simulator doesn't
+/// enforce it, so the UI is testable there).
 final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     private var interfaceController: CPInterfaceController?
     /// Rows kept by station id so live metadata can patch them in place rather
@@ -20,12 +21,12 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         didConnect interfaceController: CPInterfaceController
     ) {
         self.interfaceController = interfaceController
-        interfaceController.setRootTemplate(makeStationList(), animated: false, completion: nil)
         observeStore()
-        // Already playing when the car connects → jump straight to Now Playing.
-        if PlayerStore.shared.isPlaying {
-            pushNowPlaying(animated: false)
-        }
+        // Root = Now Playing, station list one tap away via a custom button
+        // (CPNowPlayingTemplate has no nav-bar corner buttons, so the button
+        // joins the playback control row instead).
+        CPNowPlayingTemplate.shared.updateNowPlayingButtons([makeStationListButton()])
+        interfaceController.setRootTemplate(CPNowPlayingTemplate.shared, animated: false, completion: nil)
     }
 
     func templateApplicationScene(
@@ -38,6 +39,19 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     }
 
     // MARK: – Station list
+
+    /// Custom button in the Now Playing control row that pushes the station list.
+    private func makeStationListButton() -> CPNowPlayingImageButton {
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+        guard let image = UIImage(systemName: "list.bullet", withConfiguration: config)?
+            .applyingSymbolConfiguration(.init(paletteColors: [.white]))
+        else { fatalError("missing list.bullet symbol") }
+        return CPNowPlayingImageButton(image: image) { [weak self] _ in
+            guard let self, let controller = self.interfaceController,
+                  controller.topTemplate !== CPNowPlayingTemplate.shared else { return }
+            controller.pushTemplate(self.makeStationList(), animated: true, completion: nil)
+        }
+    }
 
     private func makeStationList() -> CPListTemplate {
         let sections: [CPListSection] = Stations.grouped
@@ -59,7 +73,8 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         item.handler = { [weak self] _, completion in
             Task { @MainActor in
                 PlayerStore.shared.play(station)
-                self?.pushNowPlaying(animated: true)
+                // List lives on top of the Now Playing root — pop back to it.
+                self?.interfaceController?.popTemplate(animated: true, completion: nil)
                 completion()
             }
         }
@@ -101,15 +116,6 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     private func isLive(_ station: Station) -> Bool {
         let store = PlayerStore.shared
         return store.current?.id == station.id && store.isPlaying
-    }
-
-    // MARK: – Now Playing
-
-    private func pushNowPlaying(animated: Bool) {
-        guard let controller = interfaceController else { return }
-        let template = CPNowPlayingTemplate.shared
-        guard controller.topTemplate !== template else { return }  // don't stack dupes
-        controller.pushTemplate(template, animated: animated, completion: nil)
     }
 
     // MARK: – Store observation

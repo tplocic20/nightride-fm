@@ -10,6 +10,16 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-09-06
+
+### Changed
+
+- iOS: **CarPlay opens straight into playback.** The Now Playing screen is now
+  the root — one tap on play resumes the last station, whose name and logo are
+  shown immediately even from a cold start. The station list moved to a button
+  in the playback control row instead of being the entry screen, removing the
+  nested browse-then-play navigation.
+
 ## [1.3.4] - 2026-09-06
 
 ### Fixed
