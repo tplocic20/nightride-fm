@@ -25,6 +25,9 @@ final class PlayerStore: ObservableObject {
     /// Published so the CarPlay station list can show every station's live track
     /// and patch its rows when the feed updates.
     @Published private(set) var latestMeta: [String: TrackMeta] = [:]
+    /// Spectrum engine for the artwork easter egg (tap attached only while
+    /// the visualizer is on screen).
+    let spectrum = AudioSpectrum()
     private var rateObserver: NSKeyValueObservation?
 
     init() {
@@ -84,6 +87,7 @@ final class PlayerStore: ObservableObject {
         icyOutput.setDelegate(icyReader, queue: .main)
         item.add(icyOutput)
         player.replaceCurrentItem(with: item)
+        spectrum.attachIfNeeded(to: item)
         player.play()
     }
 
@@ -154,6 +158,17 @@ final class PlayerStore: ObservableObject {
         player.volume = 1
         sleepTimerRemaining = nil
         sleepTask = nil
+    }
+
+    // MARK: – Visualizer easter egg
+
+    func setVisualizerActive(_ active: Bool) {
+        spectrum.isActive = active
+        if active, let item = player.currentItem {
+            spectrum.attach(to: item)
+        } else {
+            spectrum.detach()
+        }
     }
 
     // MARK: – Audio session
