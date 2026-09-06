@@ -9,7 +9,6 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
-import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.extractor.metadata.icy.IcyInfo
@@ -70,7 +69,6 @@ class PlaybackService : MediaLibraryService() {
                 applyMeta()
             }
             override fun onMetadata(metadata: Metadata) = applyIcyMetadata(metadata)
-            override fun onPlayerError(error: PlaybackException) = recoverFromHlsFailure()
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 // Paused: clear the line so the last song heard doesn't sit there
@@ -115,23 +113,6 @@ class PlaybackService : MediaLibraryService() {
         }
         session = null
         super.onDestroy()
-    }
-
-    /**
-     * Auto-fall back HLS→MP3 when a stream fails to load. nightride.fm has moved
-     * the HLS path before; the fixed-bitrate MP3 endpoint is the stable safety
-     * net. Fires once per stream — if the live item is already MP3 the error
-     * surfaces normally (no retry loop), and recovery clears ExoPlayer's error
-     * state via prepare().
-     */
-    private fun recoverFromHlsFailure() {
-        val item = player.currentMediaItem ?: return
-        val onHls = item.localConfiguration?.uri?.toString()?.contains("/hls/") == true
-        if (!onHls) return
-        val station = Stations.byId(item.mediaId) ?: return
-        player.setMediaItem(station.toMediaItem(this, StreamSource.MP3))
-        player.prepare()
-        player.play()
     }
 
     /**

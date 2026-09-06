@@ -5,7 +5,6 @@ import Foundation
 struct TrackMeta: Equatable {
     let artist: String
     let title: String
-    let album: String
 
     /// "Artist — Title", degrading gracefully if either half is missing.
     var display: String {
@@ -21,21 +20,17 @@ struct TrackMeta: Equatable {
 }
 
 extension TrackMeta {
-    /// Parse an Icecast/SHOUTcast in-band `StreamTitle` ("Artist - Title") into a
-    /// TrackMeta. The MP3 stream carries this inline, synced to the buffered audio,
-    /// so it drives the live station's now-playing line in place of the (live-edge)
-    /// `/meta` feed. Splits on the first " - "; album is unknown in-band. Declared
-    /// in an extension so the memberwise initializer stays synthesized.
+    /// Parse the in-band ICY `StreamTitle` ("Artist - Title") into a TrackMeta,
+    /// splitting on the first " - ".
     init(icyStreamTitle raw: String) {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if let sep = trimmed.range(of: " - ") {
             self.init(
                 artist: String(trimmed[..<sep.lowerBound]).trimmingCharacters(in: .whitespaces),
-                title: String(trimmed[sep.upperBound...]).trimmingCharacters(in: .whitespaces),
-                album: ""
+                title: String(trimmed[sep.upperBound...]).trimmingCharacters(in: .whitespaces)
             )
         } else {
-            self.init(artist: "", title: trimmed, album: "")
+            self.init(artist: "", title: trimmed)
         }
     }
 }
@@ -120,7 +115,6 @@ final class MetaStream {
             let station: String
             let title: String
             let artist: String
-            let album: String?
         }
         guard let data = payload.data(using: .utf8),
               let entries = try? JSONDecoder().decode([Entry].self, from: data) else { return }
@@ -129,11 +123,7 @@ final class MetaStream {
 
         var updates: [String: TrackMeta] = [:]
         for e in entries {
-            updates[e.station] = TrackMeta(
-                artist: clean(e.artist),
-                title: clean(e.title),
-                album: clean(e.album ?? "")
-            )
+            updates[e.station] = TrackMeta(artist: clean(e.artist), title: clean(e.title))
         }
         if !updates.isEmpty {
             handler(updates)

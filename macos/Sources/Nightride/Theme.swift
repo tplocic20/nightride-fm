@@ -5,14 +5,11 @@ import SwiftUI
 /// synthwave radio rather than a dev tool. Shared concept across all clients.
 enum Theme {
     static let bg           = Color(hex: 0x0E0A12)   // flat near-black, faint violet
-    static let surface1     = Color(hex: 0x161019)
     static let surface2     = Color(hex: 0x1D1422)
-    static let surface3     = Color(hex: 0x281B2F)
     static let onSurface    = Color(hex: 0xECE6F0)   // cool off-white
     static let onSurfaceVar = Color(hex: 0xB9A9C4)   // muted lavender-grey
     static let primary      = Color(hex: 0xFF4D9D)   // neon magenta (carried over)
     static let secondary    = Color(hex: 0x54E6E6)   // cyan
-    static let tertiary     = Color(hex: 0xB388FF)   // electric violet
     static let outline      = Color(hex: 0x6E5A78)
     static let outlineVar   = Color(hex: 0x3A2C42)
 

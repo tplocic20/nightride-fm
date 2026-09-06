@@ -1,28 +1,5 @@
 import SwiftUI
 
-/// Which of nightride.fm's two transports to pull audio over. Both ride plain
-/// 443. NOTE: HLS is currently disabled at runtime — `PlayerStore.source` is
-/// pinned to `.mp3` and there's no picker, because Apple's native HLS handling
-/// of the live feed proved unstable while the fixed-bitrate MP3 stream is solid
-/// (incl. in-car). The HLS case, `streamURL(for:)`'s HLS branch, the HLS→MP3
-/// failover in `PlayerStore.open`, and the `saved`/`save()` pref below are all
-/// kept intact but unreachable, ready to re-enable.
-enum StreamSource: String, CaseIterable, Identifiable {
-    case hls, mp3
-
-    var id: String { rawValue }
-    var label: String { rawValue }
-
-    private static let storageKey = "streamSource"
-
-    static var saved: StreamSource {
-        UserDefaults.standard.string(forKey: storageKey)
-            .flatMap(StreamSource.init(rawValue:)) ?? .hls
-    }
-
-    func save() { UserDefaults.standard.set(rawValue, forKey: Self.storageKey) }
-}
-
 struct Station: Identifiable, Hashable {
     let id: String         // stream key, e.g. "nightride"
     let name: String
@@ -32,13 +9,10 @@ struct Station: Identifiable, Hashable {
     /// gradient colours. Used to tint the UI just enough to tell stations apart.
     var accent: Color { Color(hex: accentHex) }
 
-    /// All stations stream from the same host on both transports.
-    func streamURL(for source: StreamSource) -> URL {
-        switch source {
-        case .hls: URL(string: "https://stream.nightride.fm/hls/\(id)/\(id).m3u8")!
-        case .mp3: URL(string: "https://stream.nightride.fm/\(id).mp3")!
-        }
-    }
+    /// Fixed-bitrate MP3. Native HLS handling of the live feed proved unstable
+    /// (incl. in-car), so the app is MP3-only — git history has the HLS branch
+    /// and HLS→MP3 failover if native support ever improves.
+    var streamURL: URL { URL(string: "https://stream.nightride.fm/\(id).mp3")! }
 }
 
 extension Station {

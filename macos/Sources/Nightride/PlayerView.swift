@@ -27,9 +27,6 @@ struct PlayerView: View {
         }
         .frame(width: 340)
         .foregroundStyle(Theme.onSurface)
-        // No scoped `.animation(value:)` here — every transition is driven by a
-        // single `withAnimation(Theme.transition)` in PlayerStore, so the whole
-        // view animates in one transaction and nothing snaps independently.
     }
 
     /// Flash the copy toast for ~1.4s.
@@ -87,7 +84,6 @@ struct PlayerView: View {
     @ViewBuilder
     private var trackActions: some View {
         if let track = store.nowPlaying, !track.isEmpty {
-            // Four equal-width chips sharing the row (25% each, minus spacing).
             HStack(spacing: 6) {
                 ForEach(MusicService.allCases) { service in
                     ActionChip(label: service.label, accent: accent) {
@@ -174,11 +170,6 @@ struct PlayerView: View {
                 .fill(Theme.outlineVar)
                 .frame(height: 1)
 
-            // A 2×2 grid of external links — station links on the top row,
-            // author/source on the bottom — given the footer's full width so
-            // labels never truncate. The Grid keeps the two columns aligned
-            // despite differing label widths. The public repo's Issues page is
-            // the bug tracker.
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 GridRow {
                     LinkButton(label: "↗ nightride.fm", url: "https://nightride.fm")
@@ -191,8 +182,6 @@ struct PlayerView: View {
                 }
             }
 
-            // Bottom line: quit on the right. (The HLS/MP3 transport switch that
-            // used to sit on the left is gone — playback is MP3-only for now.)
             HStack {
                 Spacer(minLength: 0)
                 FooterButton(label: "quit ▸") {
@@ -301,11 +290,8 @@ private struct StationRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                // Selection glyph + colour flip instantly: PlayerStore changes
-                // `current` outside its animated transaction, so only the track
-                // change animates. That keeps the `/`→`>` swap snappy (no laggy
-                // cross-dissolve) while letting every row — including the newly-
-                // and previously-selected ones — glide with the layout.
+                // Glyph/colour flip is instant (PlayerStore mutates `current`
+                // outside the animation); only the track change animates.
                 Text(isCurrent ? ">" : "/")
                     .foregroundStyle(isCurrent ? station.accent : Theme.outline)
                 Text(station.name.lowercased())

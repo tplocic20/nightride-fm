@@ -3,17 +3,11 @@ import Combine
 import MediaPlayer
 import UIKit
 
-/// CarPlay entry point. Presents a `CPListTemplate` of stations — each row shows
-/// the station's current live track and a now-playing indicator for the active
-/// one — and pushes the system `CPNowPlayingTemplate` when a station is picked.
-/// Playback, metadata and transport all flow through the same `PlayerStore` /
-/// `MPNowPlayingInfoCenter` / `MPRemoteCommandCenter` the phone UI uses, so
-/// there's no CarPlay-specific playback glue.
-///
-/// This is dead weight on builds without the `com.apple.developer.carplay-audio`
-/// entitlement — iOS simply never connects a CarPlay scene without it. (The iOS
-/// Simulator does NOT enforce the entitlement, so the whole UI is testable there
-/// via I/O → External Displays → CarPlay.)
+/// CarPlay entry point. Presents a `CPListTemplate` of stations (each row shows
+/// the station's live track) and pushes the system `CPNowPlayingTemplate` on
+/// pick. Playback flows through the phone's `PlayerStore` — no CarPlay-specific
+/// glue. Dead weight without the `com.apple.developer.carplay-audio`
+/// entitlement (the Simulator doesn't enforce it, so the UI is testable there).
 final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     private var interfaceController: CPInterfaceController?
     /// Rows kept by station id so live metadata can patch them in place rather
@@ -121,9 +115,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     // MARK: – Store observation
 
     private func observeStore() {
-        // Any published change (current station, play state, or the per-station
-        // metadata feed) repaints the rows. `objectWillChange` fires *before* the
-        // value updates, so hop a turn to read the settled values.
+        // `objectWillChange` fires before the values settle — hop a turn to read.
         PlayerStore.shared.objectWillChange
             .sink { [weak self] _ in
                 Task { @MainActor in self?.refreshRows() }

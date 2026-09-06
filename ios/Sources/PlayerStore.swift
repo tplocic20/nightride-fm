@@ -11,15 +11,6 @@ final class PlayerStore: ObservableObject {
     @Published private(set) var isPlaying = false
     @Published private(set) var nowPlaying: TrackMeta?
 
-    /// Pinned to MP3. The HLS transport (StreamSource.hls, `streamURL(for:)`,
-    /// the HLS→MP3 failover in `open`) is kept in the codebase for the future
-    /// but is intentionally unreachable at runtime: Apple's native HLS handling
-    /// of the live feed was unstable, while the fixed-bitrate MP3 stream is
-    /// solid (incl. in-car), so we ship MP3-only with no transport picker and
-    /// ignore any saved StreamSource. Restore `.saved`/`@Published` + the picker
-    /// to re-enable HLS.
-    let source: StreamSource = .mp3
-
     private let player = AVPlayer()
     private var startedAt: Date?
     /// Reads the live station's now-playing line from the MP3 stream's in-band ICY
@@ -28,8 +19,6 @@ final class PlayerStore: ObservableObject {
     private lazy var icyReader = ICYMetadataReader { [weak self] title in
         Task { @MainActor [weak self] in self?.handleICYTitle(title) }
     }
-    /// Watches the live item's load status so we can fall back HLS→MP3 (see `open`).
-    private var itemObserver: NSKeyValueObservation?
     private var meta: MetaStream?
     /// Latest known track per station id — kept warm so selecting a station
     /// shows its current track instantly, instead of waiting for the next change.
@@ -60,7 +49,6 @@ final class PlayerStore: ObservableObject {
 
     deinit {
         rateObserver?.invalidate()
-        itemObserver?.invalidate()
     }
 
     // MARK: – User intent
@@ -72,24 +60,12 @@ final class PlayerStore: ObservableObject {
         // a wrong artist that flips on play is worse than ~1s of blank. The
         // in-band ICY title fills this in as soon as audio is buffered.
 
-        open(station, on: source)
+        open(station)
         refreshNowPlaying()
     }
 
-    /// Open a station on a specific transport, watching the new item for a load
-    /// failure so we can fall back HLS→MP3 automatically — nightride.fm has moved
-    /// the HLS path before, and the fixed-bitrate MP3 endpoint is the stable
-    /// safety net. The fallback fires once per open: if MP3 also fails, or the
-    /// user has already switched stations, the error just surfaces.
-    private func open(_ station: Station, on transport: StreamSource) {
-        let item = AVPlayerItem(url: station.streamURL(for: transport))
-        itemObserver = item.observe(\.status, options: [.new]) { [weak self] item, _ in
-            guard item.status == .failed else { return }
-            Task { @MainActor [weak self] in
-                guard let self, transport == .hls, self.current?.id == station.id else { return }
-                self.open(station, on: .mp3)
-            }
-        }
+    private func open(_ station: Station) {
+        let item = AVPlayerItem(url: station.streamURL)
         // Pull the live now-playing line from the stream's in-band ICY metadata so
         // it tracks the buffered audio (see `icyReader` / `handleICYTitle`).
         let icyOutput = AVPlayerItemMetadataOutput(identifiers: nil)
@@ -183,7 +159,7 @@ final class PlayerStore: ObservableObject {
             return
         }
 
-        let track = nowPlaying ?? TrackMeta(artist: "", title: "", album: "")
+        let track = nowPlaying ?? TrackMeta(artist: "", title: "")
         var info: [String: Any] = [
             // Lock screen reads: title (song) → artist → album (station).
             MPMediaItemPropertyTitle: track.title.isEmpty ? cur.name : track.title,
