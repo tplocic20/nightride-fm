@@ -8,15 +8,13 @@ struct ContentView: View {
     @AppStorage("scanlines") private var scanlinesOn =
         UserDefaults.standard.string(forKey: "theme") == "amber"
 
-    /// Whether the artwork easter egg is flipped to the spectrum side.
-    @State private var artFlipped = false
+    /// Artwork easter egg: continuous, unbounded spin angle. 0 = artwork,
+    /// 180 = spectrum, and it keeps counting past either — a flick can throw
+    /// it several turns in whichever direction the finger went.
+    @State private var spinAngle: Double = 0
 
-    /// Live drag, -1...1, added to the settled flip so the cover turns with
-    /// the finger instead of snapping when the gesture ends.
-    @State private var flipDrag: Double = 0
-
-    /// 0 = artwork, 180 = spectrum. Continuous while dragging.
-    private var flipAngle: Double { (artFlipped ? 180 : 0) + flipDrag * 180 }
+    /// Angle the current drag started from, nil when no drag is in flight.
+    @State private var dragStart: Double?
 
     /// Brief "copied" confirmation state for the copy action chip.
     @State private var copied = false
@@ -294,19 +292,14 @@ struct ContentView: View {
         if let station = store.current, let image = Artwork.image(for: station) {
             // Easter egg: drag or tap the cover — it turns over to a pixel
             // spectrum fed by the live stream.
-            FlipCard(angle: flipAngle, size: size, border: accent.opacity(0.6)) {
+            FlipCard(angle: spinAngle, size: size, border: accent.opacity(0.6)) {
                 artworkCover(station: station, image: image, size: size)
             } back: {
                 PixelSpectrum(spectrum: store.spectrum, accent: accent)
             }
             .contentShape(Rectangle())
             .gesture(flipGesture(size: size))
-            .onTapGesture { settleFlip(to: !artFlipped) }
-            // Start analysing as soon as the turn is under way, so the
-            // spectrum is already live by the time it faces the viewer.
-            .onChange(of: flipAngle >= 45) { _, showing in
-                store.setVisualizerActive(showing)
-            }
+            .onTapGesture { spin(to: spinAngle + 180) }
         } else {
             Image(systemName: store.isPlaying ? "waveform" : "moon.stars")
                 .font(.system(size: min(size * 0.36, 80)))
@@ -320,22 +313,34 @@ struct ContentView: View {
     private func flipGesture(size: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 5)
             .onChanged { value in
-                // Track only toward the other face, and never past it.
-                let progress = value.translation.width / size
-                flipDrag = artFlipped ? min(0, max(-1, progress))
-                                      : max(0, min(1, progress))
+                let start = dragStart ?? spinAngle
+                dragStart = start
+                // A cover's width of drag is half a turn, either way, no clamp.
+                spinAngle = start + value.translation.width / size * 180
+                store.setVisualizerActive(true)
             }
             .onEnded { value in
-                let travelled = abs(value.translation.width) > size * 0.35
-                let flicked = abs(value.predictedEndTranslation.width) > size * 0.6
-                settleFlip(to: travelled || flicked ? !artFlipped : artFlipped)
+                let start = dragStart ?? spinAngle
+                dragStart = nil
+                // UIKit already projects the flick's deceleration for us —
+                // rounding that to the nearest face gives a fidget-spinner
+                // throw for free: hard flick, several turns, gentle glide out.
+                let projected = start + value.predictedEndTranslation.width / size * 180
+                spin(to: (projected / 180).rounded() * 180)
             }
     }
 
-    private func settleFlip(to flipped: Bool) {
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-            artFlipped = flipped
-            flipDrag = 0
+    /// Settles onto a face, decelerating over a duration that grows with the
+    /// number of turns left to travel.
+    private func spin(to target: Double) {
+        let turns = abs(target - spinAngle) / 180
+        // Keep the FFT running for the whole spin so the bars are alive on
+        // every pass, not just when the back face is the resting one.
+        store.setVisualizerActive(true)
+        withAnimation(.easeOut(duration: min(2.2, 0.4 + turns * 0.16))) {
+            spinAngle = target
+        } completion: {
+            store.setVisualizerActive(showsBack(spinAngle))
         }
     }
 
@@ -459,6 +464,14 @@ private struct MorphText: View {
     }
 }
 
+/// Whether a spin angle has the card's back face pointing at the viewer.
+/// Normalised, so it holds for any number of turns in either direction.
+private func showsBack(_ angle: Double) -> Bool {
+    let a = (angle.truncatingRemainder(dividingBy: 360) + 360)
+        .truncatingRemainder(dividingBy: 360)
+    return a >= 90 && a < 270
+}
+
 /// A two-sided card. It conforms to `Animatable` so the face swap follows the
 /// *animated* angle: a spring settle turns over at the halfway point, instead
 /// of swapping the instant the animation is scheduled.
@@ -485,7 +498,7 @@ private struct FlipCard<Front: View, Back: View>: View, Animatable {
 
     var body: some View {
         ZStack {
-            if angle < 90 {
+            if !showsBack(angle) {
                 front
             } else {
                 // The card is turned away from the viewer here, so the back
