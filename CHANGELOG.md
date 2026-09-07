@@ -10,6 +10,15 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Changed
+
+- iOS: **The artwork spins both ways now.** The easter egg's flip used to turn
+  one direction only and stop dead at half a turn. Drag the cover either way,
+  as far as you like, and let go — a flick throws it through several turns and
+  glides to a stop on a face, fidget-spinner style. A short drag that doesn't
+  clear halfway falls back to where it started. The spectrum stays live for the
+  whole spin, so the bars are moving every time the back face sweeps past.
+
 ## [1.4.7] - 2026-09-07
 
 ### Added
