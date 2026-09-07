@@ -8,11 +8,21 @@ struct ContentView: View {
     @AppStorage("scanlines") private var scanlinesOn =
         UserDefaults.standard.string(forKey: "theme") == "amber"
 
-    /// Whether the "About" sheet (attribution + contact) is showing.
-    @State private var showAbout = false
+    /// Whether the artwork easter egg is flipped to the spectrum side.
+    @State private var artFlipped = false
+
+    /// Live drag, -1...1, added to the settled flip so the cover turns with
+    /// the finger instead of snapping when the gesture ends.
+    @State private var flipDrag: Double = 0
+
+    /// 0 = artwork, 180 = spectrum. Continuous while dragging.
+    private var flipAngle: Double { (artFlipped ? 180 : 0) + flipDrag * 180 }
 
     /// Brief "copied" confirmation state for the copy action chip.
     @State private var copied = false
+
+    /// Whether the "About" sheet (attribution + contact) is showing.
+    @State private var showAbout = false
 
     /// Current station's accent, or the Nightride magenta before anything plays.
     private var accent: Color { store.current?.accent ?? Color(hex: 0xCC55FF) }
@@ -282,8 +292,21 @@ struct ContentView: View {
     @ViewBuilder
     private func coverView(size: CGFloat) -> some View {
         if let station = store.current, let image = Artwork.image(for: station) {
-            artworkCover(station: station, image: image, size: size)
-                .overlay(Rectangle().strokeBorder(accent.opacity(0.6), lineWidth: 1))
+            // Easter egg: drag or tap the cover — it turns over to a pixel
+            // spectrum fed by the live stream.
+            FlipCard(angle: flipAngle, size: size, border: accent.opacity(0.6)) {
+                artworkCover(station: station, image: image, size: size)
+            } back: {
+                PixelSpectrum(spectrum: store.spectrum, accent: accent)
+            }
+            .contentShape(Rectangle())
+            .gesture(flipGesture(size: size))
+            .onTapGesture { settleFlip(to: !artFlipped) }
+            // Start analysing as soon as the turn is under way, so the
+            // spectrum is already live by the time it faces the viewer.
+            .onChange(of: flipAngle >= 45) { _, showing in
+                store.setVisualizerActive(showing)
+            }
         } else {
             Image(systemName: store.isPlaying ? "waveform" : "moon.stars")
                 .font(.system(size: min(size * 0.36, 80)))
@@ -291,6 +314,28 @@ struct ContentView: View {
                               options: .repeating,
                               isActive: store.isPlaying)
                 .foregroundStyle(accent)
+        }
+    }
+
+    private func flipGesture(size: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 5)
+            .onChanged { value in
+                // Track only toward the other face, and never past it.
+                let progress = value.translation.width / size
+                flipDrag = artFlipped ? min(0, max(-1, progress))
+                                      : max(0, min(1, progress))
+            }
+            .onEnded { value in
+                let travelled = abs(value.translation.width) > size * 0.35
+                let flicked = abs(value.predictedEndTranslation.width) > size * 0.6
+                settleFlip(to: travelled || flicked ? !artFlipped : artFlipped)
+            }
+    }
+
+    private func settleFlip(to flipped: Bool) {
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+            artFlipped = flipped
+            flipDrag = 0
         }
     }
 
@@ -410,6 +455,101 @@ private struct MorphText: View {
                 return c == " " ? " " : Self.glyphs.randomElement()!
             })
             try? await Task.sleep(for: .seconds(0.03))
+        }
+    }
+}
+
+/// A two-sided card. It conforms to `Animatable` so the face swap follows the
+/// *animated* angle: a spring settle turns over at the halfway point, instead
+/// of swapping the instant the animation is scheduled.
+private struct FlipCard<Front: View, Back: View>: View, Animatable {
+    var angle: Double
+    let size: CGFloat
+    let border: Color
+    let front: Front
+    let back: Back
+
+    init(angle: Double, size: CGFloat, border: Color,
+         @ViewBuilder front: () -> Front, @ViewBuilder back: () -> Back) {
+        self.angle = angle
+        self.size = size
+        self.border = border
+        self.front = front()
+        self.back = back()
+    }
+
+    var animatableData: Double {
+        get { angle }
+        set { angle = newValue }
+    }
+
+    var body: some View {
+        ZStack {
+            if angle < 90 {
+                front
+            } else {
+                // The card is turned away from the viewer here, so the back
+                // face needs its own half turn or it reads mirrored.
+                back.rotation3DEffect(.degrees(180), axis: (0, 1, 0))
+            }
+        }
+        .frame(width: size, height: size)
+        .overlay(Rectangle().strokeBorder(border, lineWidth: 1))
+        .rotation3DEffect(.degrees(angle), axis: (0, 1, 0), perspective: 0.6)
+    }
+}
+
+/// The easter egg's back face: a pixel-art spectrum. Redrawn every frame via
+/// TimelineView reading the engine's snapshot — no published state churns
+/// SwiftUI at 60fps, only the Canvas contents change.
+private struct PixelSpectrum: View {
+    let spectrum: AudioSpectrum
+    let accent: Color
+
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            // The timeline's date has to reach the drawing, otherwise SwiftUI
+            // sees an unchanged Canvas and redraws it a handful of times a
+            // minute instead of every frame.
+            let now = timeline.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let levels = spectrum.snapshot(at: now)
+                let cols = levels.count
+                let rows = 8
+                let gap: CGFloat = 2
+                let cell = min((size.width - gap * CGFloat(cols - 1)) / CGFloat(cols),
+                               (size.height - gap * CGFloat(rows - 1)) / CGFloat(rows))
+                let gridW = CGFloat(cols) * cell + gap * CGFloat(cols - 1)
+                let gridH = CGFloat(rows) * cell + gap * CGFloat(rows - 1)
+                let origin = CGPoint(x: (size.width - gridW) / 2, y: (size.height - gridH) / 2)
+                for (col, level) in levels.enumerated() {
+                    drawColumn(ctx, level: level, col: col, rows: rows,
+                               origin: origin, cell: cell, gap: gap, gridH: gridH)
+                }
+            }
+        }
+        .background(Color(hex: 0x0E0A12).opacity(0.6))
+        .shadow(color: accent.opacity(0.5), radius: 16)
+    }
+
+    private func drawColumn(
+        _ ctx: GraphicsContext, level: Float, col: Int, rows: Int,
+        origin: CGPoint, cell: CGFloat, gap: CGFloat, gridH: CGFloat
+    ) {
+        let lit = min(rows, Int(level * Float(rows + 1)))
+        let x = origin.x + CGFloat(col) * (cell + gap)
+        for row in 0..<rows {
+            // Row 0 is the bottom of the stack.
+            let y = origin.y + gridH - CGFloat(row + 1) * (cell + gap)
+            let rect = CGRect(x: x, y: y, width: cell, height: cell)
+            if row < lit {
+                // Peak cell flashes white, the rest shade with height.
+                let top = row == lit - 1
+                let shade = accent.opacity(0.55 + 0.45 * Double(row) / Double(rows))
+                ctx.fill(Path(rect), with: .color(top ? .white : shade))
+            } else {
+                ctx.fill(Path(rect), with: .color(.white.opacity(0.06)))
+            }
         }
     }
 }

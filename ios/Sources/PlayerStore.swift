@@ -25,6 +25,9 @@ final class PlayerStore: ObservableObject {
     /// Published so the CarPlay station list can show every station's live track
     /// and patch its rows when the feed updates.
     @Published private(set) var latestMeta: [String: TrackMeta] = [:]
+    /// Spectrum engine for the artwork easter egg. Its tap is attached to every
+    /// item at creation and only analyses while the egg is on screen.
+    let spectrum = AudioSpectrum()
     private var rateObserver: NSKeyValueObservation?
 
     init() {
@@ -45,6 +48,7 @@ final class PlayerStore: ObservableObject {
             let rate = change.newValue ?? 0
             Task { @MainActor [weak self] in
                 self?.isPlaying = rate != 0
+                self?.spectrum.isStreaming = rate != 0
                 self?.refreshNowPlaying()
             }
         }
@@ -84,6 +88,7 @@ final class PlayerStore: ObservableObject {
         icyOutput.setDelegate(icyReader, queue: .main)
         item.add(icyOutput)
         player.replaceCurrentItem(with: item)
+        spectrum.attach(to: item)
         player.play()
     }
 
@@ -154,6 +159,14 @@ final class PlayerStore: ObservableObject {
         player.volume = 1
         sleepTimerRemaining = nil
         sleepTask = nil
+    }
+
+    // MARK: – Visualizer easter egg
+
+    /// Showing or hiding the egg only gates the FFT. The tap is attached for
+    /// the life of the item, so flipping the cover cannot disturb playback.
+    func setVisualizerActive(_ active: Bool) {
+        spectrum.isActive = active
     }
 
     // MARK: – Audio session
