@@ -10,6 +10,50 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Added
+
+- iOS: **The artwork easter egg is back.** Swipe or tap the cover and it flips
+  to the live pixel spectrum again. The removal in 1.4.6 was a misdiagnosis:
+  `MTAudioProcessingTap` is fine on iOS 26. The tap was created with no init
+  callback, and `MTAudioProcessingTapGetStorage` returns only what that
+  callback parks in `tapStorageOut` — so storage was NULL and the first
+  `prepare` dereferenced it. One init callback fixes it.
+
+### Fixed
+
+- iOS: **Flipping the cover no longer interrupts the stream.** The tap was
+  attached by assigning `audioMix` to an item that was already playing, which
+  makes AVPlayer rebuild its audio pipeline — an audible drop-out, and several
+  seconds before the tap delivered a single buffer. The tap is now attached
+  when the item is created, and showing or hiding the egg only gates the FFT,
+  so the audio path never changes. Measured on device: callbacks hold a steady
+  12/s straight through a flip.
+- iOS: **The bars no longer drop out at random.** Every 20-35 seconds AVPlayer
+  re-prepares the tap to refill its buffer: callbacks pause for up to two
+  seconds and the buffers either side of that arrive as digital silence, all
+  while the speaker plays on. The old decay read both as silence and slammed
+  the bars down. Now the player tells the engine when it is streaming, silent
+  batches are skipped rather than analysed, and the fade is time-based and
+  only starts after playback really stops. Measured over 150 seconds on
+  device: every remaining dip tracks genuinely quiet audio.
+- iOS: **The cover turns with your finger.** Dragging rotates it in real time
+  and it springs back if you let go early; a flick or a third of the width
+  completes the turn. The card is `Animatable`, so the faces swap at the true
+  halfway point of the animation rather than the moment it is scheduled — and
+  the spectrum no longer renders mirrored, with its bass bands on the right.
+- iOS: **The spectrum animates.** The `Canvas` ignored its `TimelineView`
+  context, so SwiftUI saw an unchanged view and redrew it whenever something
+  else on screen happened — 9 times in 17 seconds, against 104 analysis
+  updates. Threading the timeline's date into the drawing takes it to 60fps.
+- iOS: **Spectrum bands now show the right frequencies.** The FFT handed
+  `vDSP_fft_zrip` a real array with a zeroed imaginary half instead of
+  deinterleaving with `vDSP_ctoz`, which zero-stuffs the signal and mirrors
+  the spectrum. The transform also grew to 4096 points, because 43 Hz bins
+  could not separate the bottom bands, and band level is now summed energy so
+  a tone reads the same in a narrow low band as in a wide high one. Levels are
+  calibrated against the live stream, and `AudioSpectrum.selfCheck()` asserts
+  that test tones light the band that contains them.
+
 ## [1.4.6] - 2026-09-07
 
 ### Fixed
