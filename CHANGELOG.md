@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-09-15
+
 ### Added
 
 - iOS: **Station covers in the CarPlay list.** Above the station rows there's
