@@ -118,7 +118,11 @@ final class PlayerStore: ObservableObject {
     private func step(_ delta: Int) {
         let list = Stations.all
         guard !list.isEmpty else { return }
-        let baseIdx = current.flatMap { c in list.firstIndex(where: { $0.id == c.id }) } ?? -1
+        // Nothing playing yet: sit just off whichever end the step comes from,
+        // so next lands on the first station and prev on the last. A single
+        // -1 sentinel would make prev skip the last one and land on Rekt.
+        let baseIdx = current.flatMap { c in list.firstIndex(where: { $0.id == c.id }) }
+            ?? (delta > 0 ? -1 : 0)
         let nextIdx = ((baseIdx + delta) % list.count + list.count) % list.count
         play(list[nextIdx])
     }

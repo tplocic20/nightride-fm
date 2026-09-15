@@ -10,6 +10,34 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Added
+
+- iOS: **Station covers in the CarPlay list.** Above the station rows there's
+  now a scrolling strip of the pixel-art covers — tap one to play it. On iOS 26
+  they're drawn at 220pt, more than twice the size of the rows' thumbnails;
+  earlier releases get the older 95pt image row. The cells carry no labels,
+  because the covers already spell the station name out in pixel art and the
+  rows underneath repeat it in text along with the live track.
+
+### Fixed
+
+- iOS: **The CarPlay station list button works now, and it's where you'd look
+  for it.** It never worked: the handler bailed whenever Now Playing was the
+  top template, which it always is, since that's the root. The list has moved
+  off the playback control row and onto the Now Playing template's own Up Next
+  button — floating in the top-right corner, the same place Apple Music puts
+  it — which retires the broken check along with the custom button.
+- iOS: **CarPlay covers stay crisp on every head unit.** They were rendered at
+  the phone's screen scale, so a 3x phone driving a 2x car screen handed over
+  more pixels than CarPlay asked for and it resampled them smoothly — blurring
+  the pixel art the pre-render exists to protect. They're now drawn at the car
+  screen's scale, and cached, since the list is rebuilt on every tap.
+- iOS: **Previous station no longer skips Rektory.** From a fresh launch with
+  nothing played yet, pressing previous — on the phone, the lock screen, or the
+  car — jumped to Rekt, stepping over the last station in the list. Both ends
+  now wrap the way you'd expect: next starts at Nightride FM, previous at
+  Rektory.
+
 ## [1.4.8] - 2026-09-07
 
 ### Changed
