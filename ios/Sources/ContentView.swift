@@ -8,14 +8,6 @@ struct ContentView: View {
     @AppStorage("scanlines") private var scanlinesOn =
         UserDefaults.standard.string(forKey: "theme") == "amber"
 
-    /// Artwork easter egg: continuous, unbounded spin angle. 0 = artwork,
-    /// 180 = spectrum, and it keeps counting past either — a flick can throw
-    /// it several turns in whichever direction the finger went.
-    @State private var spinAngle: Double = 0
-
-    /// Angle the current drag started from, nil when no drag is in flight.
-    @State private var dragStart: Double?
-
     /// Brief "copied" confirmation state for the copy action chip.
     @State private var copied = false
 
@@ -244,17 +236,15 @@ struct ContentView: View {
     }
 
     /// Station name + the live "Artist — Title" line (no cover/chips) so the
-    /// landscape layout can place them beside the cover. Both animate with the
-    /// scramble effect when their text changes.
+    /// landscape layout can place them beside the cover.
     private var trackInfo: some View {
         VStack(spacing: 16) {
-            MorphText(text: store.current?.name ?? "Tap play to start")
+            Text(store.current?.name ?? "Tap play to start")
                 .font(.title.bold())
                 .multilineTextAlignment(.center)
 
             // Reserve both lines so a wrapping title doesn't nudge the layout as
-            // tracks change. Plain text — morphing multi-word titles churns too
-            // much to read.
+            // tracks change.
             Text(store.nowPlaying?.display.isEmpty == false ? store.nowPlaying!.display : "Nightride FM")
                 .font(.body.weight(.medium))
                 .foregroundStyle(.white.opacity(0.8))
@@ -290,16 +280,27 @@ struct ContentView: View {
     @ViewBuilder
     private func coverView(size: CGFloat) -> some View {
         if let station = store.current, let image = Artwork.image(for: station) {
-            // Easter egg: drag or tap the cover — it turns over to a pixel
-            // spectrum fed by the live stream.
-            FlipCard(angle: spinAngle, size: size, border: accent.opacity(0.6)) {
-                artworkCover(station: station, image: image, size: size)
-            } back: {
-                PixelSpectrum(spectrum: store.spectrum, accent: accent)
-            }
-            .contentShape(Rectangle())
-            .gesture(flipGesture(size: size))
-            .onTapGesture { spin(to: spinAngle + 180) }
+            Image(uiImage: image)
+                .resizable()
+                .interpolation(.none)   // keep the pixel art crisp when scaled
+                .scaledToFit()
+                .frame(width: size, height: size)
+                // Keyed per station so a switch crossfades with a slight settle.
+                .id(station.id)
+                .transition(.opacity.combined(with: .scale(scale: 1.06)))
+                .overlay(Rectangle().strokeBorder(accent.opacity(0.6), lineWidth: 1))
+                // Blurred duplicate behind the cover: an artwork-sourced glow
+                // that recolors itself with every station switch.
+                .background(
+                    Image(uiImage: image)
+                        .resizable()
+                        .interpolation(.none)
+                        .scaledToFill()
+                        .frame(width: size, height: size)
+                        .blur(radius: 36)
+                        .opacity(0.35)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                )
         } else {
             Image(systemName: store.isPlaying ? "waveform" : "moon.stars")
                 .font(.system(size: min(size * 0.36, 80)))
@@ -308,64 +309,6 @@ struct ContentView: View {
                               isActive: store.isPlaying)
                 .foregroundStyle(accent)
         }
-    }
-
-    private func flipGesture(size: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 5)
-            .onChanged { value in
-                let start = dragStart ?? spinAngle
-                dragStart = start
-                // A cover's width of drag is half a turn, either way, no clamp.
-                spinAngle = start + value.translation.width / size * 180
-                store.setVisualizerActive(true)
-            }
-            .onEnded { value in
-                let start = dragStart ?? spinAngle
-                dragStart = nil
-                // UIKit already projects the flick's deceleration for us —
-                // rounding that to the nearest face gives a fidget-spinner
-                // throw for free: hard flick, several turns, gentle glide out.
-                let projected = start + value.predictedEndTranslation.width / size * 180
-                spin(to: (projected / 180).rounded() * 180)
-            }
-    }
-
-    /// Settles onto a face, decelerating over a duration that grows with the
-    /// number of turns left to travel.
-    private func spin(to target: Double) {
-        let turns = abs(target - spinAngle) / 180
-        // Keep the FFT running for the whole spin so the bars are alive on
-        // every pass, not just when the back face is the resting one.
-        store.setVisualizerActive(true)
-        withAnimation(.easeOut(duration: min(2.2, 0.4 + turns * 0.16))) {
-            spinAngle = target
-        } completion: {
-            store.setVisualizerActive(showsBack(spinAngle))
-        }
-    }
-
-    /// The station cover with its blurred artwork glow behind it.
-    private func artworkCover(station: Station, image: UIImage, size: CGFloat) -> some View {
-        Image(uiImage: image)
-            .resizable()
-            .interpolation(.none)   // keep the pixel art crisp when scaled
-            .scaledToFit()
-            .frame(width: size, height: size)
-            // Keyed per station so a switch crossfades with a slight settle.
-            .id(station.id)
-            .transition(.opacity.combined(with: .scale(scale: 1.06)))
-            // Blurred duplicate behind the cover: an artwork-sourced glow
-            // that recolors itself with every station switch.
-            .background(
-                Image(uiImage: image)
-                    .resizable()
-                    .interpolation(.none)
-                    .scaledToFill()
-                    .frame(width: size, height: size)
-                    .blur(radius: 36)
-                    .opacity(0.35)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            )
     }
 
     private var transportControls: some View {
@@ -417,152 +360,6 @@ struct ContentView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .strokeBorder(accent.opacity(0.4), lineWidth: 1)
             )
-        }
-    }
-}
-
-/// Shared-letter morph animation: when `text` changes, characters that sit at
-/// the same index in the old and new text hold still (SpaceWave → DataWave
-/// keeps "a…wave"), everything else churns glyphs briefly then resolves —
-/// like a signal re-locking. Fast (0.45s) so it reads as a flick, not a show.
-private struct MorphText: View {
-    let text: String
-
-    @State private var display: String = ""
-    @State private var settled = ""
-
-    /// Glyph pool the unresolved characters cycle through.
-    private static let glyphs = Array("!<>-_\\/[]{}=+*^?#")
-
-    var body: some View {
-        Text(display)
-            .task(id: text) { await morph() }
-    }
-
-    private func morph() async {
-        guard text != settled else { display = text; return }
-        let target = Array(text)
-        let from = Array(settled)
-        let duration = 0.45
-        let started = Date()
-        while true {
-            let progress = Date().timeIntervalSince(started) / duration
-            if progress >= 1 {
-                display = text
-                settled = text
-                return
-            }
-            let frontier = Int(Double(target.count) * progress)
-            display = String(target.enumerated().map { i, c in
-                // Shared letters hold; unresolved churn; spaces stay spaces.
-                if i < from.count, from[i] == c { return c }
-                if i < frontier { return c }
-                return c == " " ? " " : Self.glyphs.randomElement()!
-            })
-            try? await Task.sleep(for: .seconds(0.03))
-        }
-    }
-}
-
-/// Whether a spin angle has the card's back face pointing at the viewer.
-/// Normalised, so it holds for any number of turns in either direction.
-private func showsBack(_ angle: Double) -> Bool {
-    let a = (angle.truncatingRemainder(dividingBy: 360) + 360)
-        .truncatingRemainder(dividingBy: 360)
-    return a >= 90 && a < 270
-}
-
-/// A two-sided card. It conforms to `Animatable` so the face swap follows the
-/// *animated* angle: a spring settle turns over at the halfway point, instead
-/// of swapping the instant the animation is scheduled.
-private struct FlipCard<Front: View, Back: View>: View, Animatable {
-    var angle: Double
-    let size: CGFloat
-    let border: Color
-    let front: Front
-    let back: Back
-
-    init(angle: Double, size: CGFloat, border: Color,
-         @ViewBuilder front: () -> Front, @ViewBuilder back: () -> Back) {
-        self.angle = angle
-        self.size = size
-        self.border = border
-        self.front = front()
-        self.back = back()
-    }
-
-    var animatableData: Double {
-        get { angle }
-        set { angle = newValue }
-    }
-
-    var body: some View {
-        ZStack {
-            if !showsBack(angle) {
-                front
-            } else {
-                // The card is turned away from the viewer here, so the back
-                // face needs its own half turn or it reads mirrored.
-                back.rotation3DEffect(.degrees(180), axis: (0, 1, 0))
-            }
-        }
-        .frame(width: size, height: size)
-        .overlay(Rectangle().strokeBorder(border, lineWidth: 1))
-        .rotation3DEffect(.degrees(angle), axis: (0, 1, 0), perspective: 0.6)
-    }
-}
-
-/// The easter egg's back face: a pixel-art spectrum. Redrawn every frame via
-/// TimelineView reading the engine's snapshot — no published state churns
-/// SwiftUI at 60fps, only the Canvas contents change.
-private struct PixelSpectrum: View {
-    let spectrum: AudioSpectrum
-    let accent: Color
-
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            // The timeline's date has to reach the drawing, otherwise SwiftUI
-            // sees an unchanged Canvas and redraws it a handful of times a
-            // minute instead of every frame.
-            let now = timeline.date.timeIntervalSinceReferenceDate
-            Canvas { ctx, size in
-                let levels = spectrum.snapshot(at: now)
-                let cols = levels.count
-                let rows = 8
-                let gap: CGFloat = 2
-                let cell = min((size.width - gap * CGFloat(cols - 1)) / CGFloat(cols),
-                               (size.height - gap * CGFloat(rows - 1)) / CGFloat(rows))
-                let gridW = CGFloat(cols) * cell + gap * CGFloat(cols - 1)
-                let gridH = CGFloat(rows) * cell + gap * CGFloat(rows - 1)
-                let origin = CGPoint(x: (size.width - gridW) / 2, y: (size.height - gridH) / 2)
-                for (col, level) in levels.enumerated() {
-                    drawColumn(ctx, level: level, col: col, rows: rows,
-                               origin: origin, cell: cell, gap: gap, gridH: gridH)
-                }
-            }
-        }
-        .background(Color(hex: 0x0E0A12).opacity(0.6))
-        .shadow(color: accent.opacity(0.5), radius: 16)
-    }
-
-    private func drawColumn(
-        _ ctx: GraphicsContext, level: Float, col: Int, rows: Int,
-        origin: CGPoint, cell: CGFloat, gap: CGFloat, gridH: CGFloat
-    ) {
-        let lit = min(rows, Int(level * Float(rows + 1)))
-        let x = origin.x + CGFloat(col) * (cell + gap)
-        for row in 0..<rows {
-            // Row 0 is the bottom of the stack.
-            let y = origin.y + gridH - CGFloat(row + 1) * (cell + gap)
-            let rect = CGRect(x: x, y: y, width: cell, height: cell)
-            if row < lit {
-                // Peak cell flashes white, the rest shade with height.
-                let top = row == lit - 1
-                let shade = accent.opacity(0.55 + 0.45 * Double(row) / Double(rows))
-                ctx.fill(Path(rect), with: .color(top ? .white : shade))
-            } else {
-                ctx.fill(Path(rect), with: .color(.white.opacity(0.06)))
-            }
         }
     }
 }

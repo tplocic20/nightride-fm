@@ -10,6 +10,19 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Removed
+
+- iOS: **The spinnable cover is gone.** Dragging or tapping the artwork to
+  throw it over to a live spectrum looked good and cost more than it was
+  worth — the spin dropped frames on the way round and nobody needs a second
+  face on the cover. The artwork is a plain cover again, glow and all. The
+  audio tap that fed it (a full FFT pass over a second copy of the stream)
+  went with it, so the only thing reading the audio now is playback itself.
+- iOS: **Station name stops scrambling.** The glyph-churn morph on every
+  station switch read as noise more often than as an effect. Plain text again.
+
+Scanlines, the CarPlay list and everything else stay as they were.
+
 ## [1.5.0] - 2026-09-15
 
 ### Added
