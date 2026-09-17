@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-09-17
+
 ### Removed
 
 - iOS: **The spinnable cover is gone.** Dragging or tapping the artwork to
