@@ -32,8 +32,8 @@ android {
         applicationId = "dev.plocic.nightride"
         minSdk = 26          // Android 8.0 — adaptive icons + huge device coverage
         targetSdk = 35
-        versionCode = 1005001
-        versionName = "1.5.1"
+        versionCode = 1005002
+        versionName = "1.5.2"
     }
 
     signingConfigs {
