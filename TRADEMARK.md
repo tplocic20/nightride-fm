@@ -22,9 +22,7 @@ The following are mine and are **not** covered by the MIT grant:
 
 - The application **name** and display identity as published (App Store / direct
   download listings), and the bundle identifiers under `dev.plocic.*`.
-- The **app icon** (the pixel "synthwave sun" composition) and the **circuit-P
-  glyph** (`assets/glyph/circuit-p.svg`), which is the maker's mark from
-  [plocic.dev](https://plocic.dev).
+- The **app icon** (the pixel "synthwave sun" composition).
 
 You're welcome to fork the code and build your own client. If you do, please
 **use your own name, icon, and bundle identifier** so users can tell the

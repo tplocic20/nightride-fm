@@ -10,6 +10,10 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Changed
+
+- App icon and iOS launch logo are the sun alone; the maker's mark is gone.
+
 ## [1.5.1] - 2026-09-17
 
 ### Removed

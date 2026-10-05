@@ -116,7 +116,7 @@ Spotify/Apple Music account.
 ## Licence & contributing
 
 - Code: [MIT](LICENSE). Use it, learn from it, fork it.
-- Branding (names, icon, the circuit-P glyph, Nightride FM marks): see
+- Branding (names, icon, Nightride FM marks): see
   [TRADEMARK.md](TRADEMARK.md) — the code is open, the identity is reserved.
 - Want to help? See [CONTRIBUTING.md](CONTRIBUTING.md) and the
   [Code of Conduct](CODE_OF_CONDUCT.md). Found a security issue? [SECURITY.md](SECURITY.md).
