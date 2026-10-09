@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-10-09
+
 ### Changed
 
 - New App Store header and search-results art: the pixel sun over a synthwave
