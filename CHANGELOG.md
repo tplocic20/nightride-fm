@@ -10,6 +10,11 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Changed
+
+- New App Store header and search-results art: the pixel sun over a synthwave
+  grid. No changes inside the app.
+
 ## [1.5.2] - 2026-10-05
 
 ### Changed
