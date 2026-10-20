@@ -3,7 +3,7 @@ package dev.plocic.nightride
 /**
  * Splits the raw "Artist - Title" string from the /meta feed into the
  * (track, artist) pair shown on the notification, lock screen and Android Auto.
- * Mirrors PlayerStore.splitTitle in the Apple clients so every platform labels
+ * Mirrors TrackMeta(icyStreamTitle:) in the Apple clients so every platform labels
  * Now Playing identically.
  */
 object Titles {

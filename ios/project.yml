@@ -33,7 +33,7 @@ targets:
     platform: iOS
     deploymentTarget: "17.0"
     scheme:
-      testTargets: []
+      testTargets: [NightrideTests]
       gatherCoverageData: false
     sources:
       - path: Sources
@@ -81,3 +81,17 @@ targets:
         # App/Info.plist (dark ground + centred logo). Leaving the auto-generation
         # flag on would let Xcode synthesise a plain one and ignore ours.
         INFOPLIST_KEY_UILaunchScreen_Generation: NO
+
+  # Unit tests (hosted in the app so `@testable import Nightride` works).
+  # Run: xcodebuild test -scheme Nightride -destination 'platform=iOS Simulator,name=iPhone 17 Pro' CODE_SIGNING_ALLOWED=NO
+  NightrideTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Nightride
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: fm.nightride.tests
