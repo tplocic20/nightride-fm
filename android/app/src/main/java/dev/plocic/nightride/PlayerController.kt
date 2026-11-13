@@ -27,6 +27,15 @@ class PlayerController(private val context: Context) {
 
     private var controller: MediaController? = null
 
+    /** Seconds collected before playback starts (0 = off); applies on next play. */
+    var bufferSeconds by mutableStateOf(BufferSetting.load(context))
+        private set
+
+    fun setBuffer(seconds: Int) {
+        BufferSetting.save(context, seconds)
+        bufferSeconds = seconds
+    }
+
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) = sync(player)
     }
@@ -52,7 +61,8 @@ class PlayerController(private val context: Context) {
     }
 
     private fun sync(player: Player) {
-        isPlaying = player.isPlaying
+        // playWhenReady, not isPlaying: stay "playing" while buffering/reconnecting.
+        isPlaying = player.playWhenReady
         current = Stations.byId(player.currentMediaItem?.mediaId)
         nowPlaying = player.mediaMetadata.subtitle?.toString().orEmpty()
     }
@@ -66,7 +76,7 @@ class PlayerController(private val context: Context) {
 
     fun togglePlayPause() {
         val c = controller ?: return
-        if (c.isPlaying) {
+        if (c.playWhenReady) {
             c.pause()
         } else {
             // Live streams resume poorly from a stale buffer — re-open instead.
@@ -83,5 +93,23 @@ class PlayerController(private val context: Context) {
         val base = current?.let { cur -> list.indexOfFirst { it.id == cur.id } } ?: -1
         val index = ((base + delta) % list.size + list.size) % list.size
         play(list[index])
+    }
+}
+
+/**
+ * Pre-roll cushion shared by the UI and [PlaybackService] (same process): hold
+ * playback until this much audio is buffered, so dead zones play through.
+ */
+object BufferSetting {
+    @Volatile var seconds = 0
+        private set
+
+    private fun prefs(ctx: Context) = ctx.getSharedPreferences("player", Context.MODE_PRIVATE)
+
+    fun load(ctx: Context): Int = prefs(ctx).getInt("bufferSeconds", 0).also { seconds = it }
+
+    fun save(ctx: Context, value: Int) {
+        seconds = value
+        prefs(ctx).edit().putInt("bufferSeconds", value).apply()
     }
 }

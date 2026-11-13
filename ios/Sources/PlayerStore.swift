@@ -1,6 +1,7 @@
 import AVFoundation
 import Combine
 import MediaPlayer
+import Network
 import UIKit
 
 @MainActor
@@ -27,6 +28,22 @@ final class PlayerStore: ObservableObject {
     @Published private(set) var latestMeta: [String: TrackMeta] = [:]
     private var rateObserver: NSKeyValueObservation?
 
+    // MARK: Reconnect state
+    /// The listener's intent. A dropped stream is re-opened only while this is set.
+    private var wantsPlay = false
+    private var retryAttempt = 0
+    private var retryTask: Task<Void, Never>?
+    private var itemObservers: [NSObjectProtocol] = []
+    private var statusObserver: NSKeyValueObservation?
+    private let pathMonitor = NWPathMonitor()
+
+    /// Seconds of audio to collect before playback starts — a cushion that rides
+    /// out dead zones (driving, border crossings). 0 = start immediately.
+    @Published var bufferSeconds = UserDefaults.standard.integer(forKey: "bufferSeconds") {
+        didSet { UserDefaults.standard.set(bufferSeconds, forKey: "bufferSeconds") }
+    }
+    private var startTask: Task<Void, Never>?
+
     init() {
         configureAudioSession()
 
@@ -44,10 +61,23 @@ final class PlayerStore: ObservableObject {
         rateObserver = player.observe(\.rate, options: [.new]) { [weak self] _, change in
             let rate = change.newValue ?? 0
             Task { @MainActor [weak self] in
-                self?.isPlaying = rate != 0
-                self?.refreshNowPlaying()
+                guard let self else { return }
+                // Keep showing "playing" while a dropped stream reconnects.
+                self.isPlaying = rate != 0 || self.retryTask != nil || self.startTask != nil
+                if rate != 0 { self.retryAttempt = 0 }
+                self.refreshNowPlaying()
             }
         }
+        // Network back (tunnel exit, cell handover): reconnect now, skip backoff.
+        pathMonitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else { return }
+            Task { @MainActor [weak self] in
+                guard let self, self.retryTask != nil, let cur = self.current else { return }
+                self.retryTask?.cancel(); self.retryTask = nil
+                self.open(cur)
+            }
+        }
+        pathMonitor.start(queue: .main)
         // Connect to the metadata feed at launch so every station's current
         // track is cached before the user ever hits play.
         startMeta()
@@ -65,6 +95,8 @@ final class PlayerStore: ObservableObject {
     // MARK: – User intent
 
     func play(_ station: Station) {
+        wantsPlay = true
+        retryAttempt = 0
         current = station
         UserDefaults.standard.set(station.id, forKey: "lastStationId")
         startedAt = Date()
@@ -77,14 +109,37 @@ final class PlayerStore: ObservableObject {
     }
 
     private func open(_ station: Station) {
+        retryTask?.cancel(); retryTask = nil
         let item = AVPlayerItem(url: station.streamURL)
+        // Hold a cushion of audio so short dropouts (driving) play through.
+        item.preferredForwardBufferDuration = Double(max(20, bufferSeconds + 10))
+        watch(item)
         // Pull the live now-playing line from the stream's in-band ICY metadata so
         // it tracks the buffered audio (see `icyReader` / `handleICYTitle`).
         let icyOutput = AVPlayerItemMetadataOutput(identifiers: nil)
         icyOutput.setDelegate(icyReader, queue: .main)
         item.add(icyOutput)
         player.replaceCurrentItem(with: item)
-        player.play()
+        startTask?.cancel(); startTask = nil
+        guard bufferSeconds > 0 else { player.play(); return }
+        // Hold playback until the cushion is filled; playing behind live keeps it.
+        let target = Double(bufferSeconds)
+        isPlaying = true
+        startTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self, self.player.currentItem === item else { return }
+                let now = item.currentTime().seconds
+                let ahead = item.loadedTimeRanges.map(\.timeRangeValue)
+                    .filter { $0.containsTime(item.currentTime()) }
+                    .map { $0.end.seconds - now }.max() ?? 0
+                if ahead >= target {
+                    self.startTask = nil
+                    self.player.play()
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+        }
     }
 
     func togglePlayPause() {
@@ -103,6 +158,9 @@ final class PlayerStore: ObservableObject {
         // current when it's actually the last song heard (possibly hours old).
         // The brand name shows instead until the next play() streams fresh ICY.
         nowPlaying = nil
+        wantsPlay = false
+        retryTask?.cancel(); retryTask = nil
+        startTask?.cancel(); startTask = nil
         player.pause()
         refreshNowPlaying()
     }
@@ -120,6 +178,45 @@ final class PlayerStore: ObservableObject {
             ?? (delta > 0 ? -1 : 0)
         let nextIdx = ((baseIdx + delta) % list.count + list.count) % list.count
         play(list[nextIdx])
+    }
+
+    // MARK: – Reconnect
+
+    /// Re-open the stream whenever it dies: hard failure, the server closing the
+    /// connection (a live stream "ending"), or a stall that outlasts the buffer.
+    private func watch(_ item: AVPlayerItem) {
+        itemObservers.forEach(NotificationCenter.default.removeObserver)
+        let nc = NotificationCenter.default
+        itemObservers = [.AVPlayerItemFailedToPlayToEndTime, .AVPlayerItemDidPlayToEndTime]
+            .map { nc.addObserver(forName: $0, object: item, queue: .main) { [weak self] _ in
+                Task { @MainActor [weak self] in self?.scheduleReconnect() }
+            } }
+        // AVPlayer waits through a stall on its own; if it's still silent after
+        // 10s the socket is likely dead, so reconnect.
+        itemObservers.append(nc.addObserver(forName: .AVPlayerItemPlaybackStalled, object: item, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(10))
+                guard let self, self.player.currentItem === item, self.player.timeControlStatus != .playing else { return }
+                self.scheduleReconnect()
+            }
+        })
+        statusObserver = item.observe(\.status) { [weak self] item, _ in
+            guard item.status == .failed else { return }
+            Task { @MainActor [weak self] in self?.scheduleReconnect() }
+        }
+    }
+
+    /// Backoff 1, 2, 4, 8, 15, 15… seconds, forever, while the listener wants audio.
+    private func scheduleReconnect() {
+        guard wantsPlay, retryTask == nil, let station = current else { return }
+        let delay = min(Double(1 << min(retryAttempt, 4)), 15)
+        retryAttempt += 1
+        isPlaying = true
+        retryTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled, let self, self.wantsPlay else { return }
+            self.open(station)
+        }
     }
 
     // MARK: – Sleep timer

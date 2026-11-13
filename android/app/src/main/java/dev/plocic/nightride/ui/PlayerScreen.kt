@@ -53,6 +53,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -210,19 +213,22 @@ fun PlayerScreen(player: PlayerController) {
             Toast("copied to clipboard", accent)
         }
 
-        // Discreet info button → "About" (attribution + contact).
-        IconButton(
-            onClick = { showAbout = true },
+        Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = Icons.Filled.Info,
-                contentDescription = "About",
-                tint = Color.White.copy(alpha = 0.45f),
-            )
+            BufferMenu(player, accent)
+            // Discreet info button → "About" (attribution + contact).
+            IconButton(onClick = { showAbout = true }) {
+                Icon(
+                    imageVector = Icons.Filled.Info,
+                    contentDescription = "About",
+                    tint = Color.White.copy(alpha = 0.45f),
+                )
+            }
         }
 
         if (showAbout) {
@@ -614,4 +620,40 @@ private fun Toast(text: String, accent: Color) {
             .border(1.dp, accent.copy(alpha = 0.6f), CircleShape)
             .padding(horizontal = 16.dp, vertical = 8.dp),
     )
+}
+
+/**
+ * Buffer picker — seconds of audio collected before playing, so dead zones
+ * (driving, border crossings) play through. Accent + label while on.
+ */
+@Composable
+private fun BufferMenu(player: PlayerController, accent: Color) {
+    var open by remember { mutableStateOf(false) }
+    val on = player.bufferSeconds > 0
+    val tint = if (on) accent else Color.White.copy(alpha = 0.45f)
+    Box {
+        Row(
+            modifier = Modifier
+                .clickable { open = true }
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Filled.Shield, contentDescription = "Buffer", tint = tint)
+            if (on) Text(
+                "${player.bufferSeconds}s",
+                color = tint,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(start = 6.dp),
+            )
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            listOf(0, 10, 30, 60).forEach { sec ->
+                DropdownMenuItem(
+                    text = { Text(if (sec == 0) "off" else "$sec s") },
+                    onClick = { player.setBuffer(sec); open = false },
+                )
+            }
+        }
+    }
 }

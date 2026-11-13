@@ -94,6 +94,7 @@ struct ContentView: View {
         }
         .overlay(alignment: .topTrailing) {
             HStack(spacing: 4) {
+                bufferMenu
                 sleepTimerMenu
                 // Discreet info button → "About" (attribution + contact).
                 Button { showAbout = true } label: {
@@ -110,6 +111,30 @@ struct ContentView: View {
         .sheet(isPresented: $showAbout) {
             AboutView().presentationDetents([.medium])
         }
+    }
+
+    /// Buffer picker — seconds of audio to collect before playing, so dead zones
+    /// (driving, border crossings) play through. Accent + label while on.
+    private var bufferMenu: some View {
+        Menu {
+            Picker("Buffer", selection: $store.bufferSeconds) {
+                Text("off").tag(0)
+                ForEach([10, 30, 60], id: \.self) { Text("\($0) s").tag($0) }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "shield.lefthalf.filled")
+                    .font(.system(size: 18))
+                if store.bufferSeconds > 0 {
+                    Text("\(store.bufferSeconds)s")
+                        .font(.system(size: 13, design: .monospaced))
+                }
+            }
+            .foregroundStyle(store.bufferSeconds > 0 ? accent : .white.opacity(0.45))
+            .padding(16)
+            .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Buffer")
     }
 
     /// Sleep timer picker — moon turns accent and counts down while armed.

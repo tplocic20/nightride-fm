@@ -10,6 +10,18 @@ follows [Keep a Changelog](https://keepachangelog.com/) and the project uses
 
 ## [Unreleased]
 
+### Added
+
+- iOS & Android: **Buffer** setting (shield icon, top right): off / 10 / 30 / 60 s.
+  The station collects that much audio before it starts, so dead zones while
+  driving or crossing a border play straight through.
+
+### Changed
+
+- iOS & Android: a dropped stream now reconnects by itself, with growing waits
+  between tries, for as long as you haven't paused. On iOS it reconnects as soon
+  as the network comes back.
+
 ## [1.5.3] - 2026-10-09
 
 ### Changed

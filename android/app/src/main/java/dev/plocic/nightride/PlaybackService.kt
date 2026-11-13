@@ -9,8 +9,15 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.LoadControl
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.upstream.DefaultAllocator
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.metadata.icy.IcyInfo
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaConstants
@@ -46,9 +53,11 @@ class PlaybackService : MediaLibraryService() {
     private val scope = CoroutineScope(SupervisorJob())
     private val main = Handler(Looper.getMainLooper())
     private var latestMeta: Map<String, String> = emptyMap()
+    private var retryAttempt = 0
 
     override fun onCreate() {
         super.onCreate()
+        BufferSetting.load(this)
 
         player = ExoPlayer.Builder(this)
             .setAudioAttributes(
@@ -60,6 +69,34 @@ class PlaybackService : MediaLibraryService() {
             )
             .setHandleAudioBecomingNoisy(true)  // pause when headphones unplug
             .setWakeMode(C.WAKE_MODE_NETWORK)    // keep streaming with screen off
+            // Spotty mobile data (driving): by default start fast, and after a stall
+            // wait for a 10s cushion. With a buffer set, hold every start until that
+            // much audio is in — playing behind live keeps the cushion.
+            // min = max buffer so loading never pauses while we're filling.
+            .setLoadControl(object : DefaultLoadControl(
+                DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE),
+                90_000, 90_000, 2_500, 10_000,
+                C.LENGTH_UNSET, false, 0, false,
+            ) {
+                override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
+                    val target = BufferSetting.seconds * 1_000_000L
+                    if (target == 0L) return super.shouldStartPlayback(parameters)
+                    return parameters.bufferedDurationUs >= target
+                }
+            })
+            // Keep retrying a dropped connection instead of erroring out after a
+            // few attempts; delay grows 1s → 5s.
+            .setMediaSourceFactory(
+                DefaultMediaSourceFactory(this).setLoadErrorHandlingPolicy(
+                    object : DefaultLoadErrorHandlingPolicy() {
+                        override fun getMinimumLoadableRetryCount(dataType: Int) = Int.MAX_VALUE
+                        override fun getRetryDelayMsFor(info: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
+                            val d = super.getRetryDelayMsFor(info)
+                            return if (d == C.TIME_UNSET) d else minOf(info.errorCount * 1_000L, 5_000L)
+                        }
+                    }
+                )
+            )
             .build()
 
         player.addListener(object : Player.Listener {
@@ -69,6 +106,20 @@ class PlaybackService : MediaLibraryService() {
                 applyMeta()
             }
             override fun onMetadata(metadata: Metadata) = applyIcyMetadata(metadata)
+
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_READY) retryAttempt = 0
+            }
+
+            // Anything the load policy gave up on (DNS, 404, server restart):
+            // re-prepare with backoff for as long as the listener wants audio.
+            override fun onPlayerError(error: PlaybackException) {
+                val delay = minOf(1_000L shl retryAttempt.coerceAtMost(4), 15_000L)
+                retryAttempt++
+                main.postDelayed({
+                    if (player.playWhenReady && player.playbackState == Player.STATE_IDLE) player.prepare()
+                }, delay)
+            }
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 // Paused: clear the line so the last song heard doesn't sit there
@@ -105,6 +156,7 @@ class PlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
+        main.removeCallbacksAndMessages(null)
         meta.stop()
         scope.cancel()
         session?.run {
